@@ -85,6 +85,16 @@ const INITIAL_DOCS: Document[] = [
         content: 'The MVP will focus on the core document editor and the "context graph" visualization. Users must be able to branch documents and see the relationships between them.',
         status: 'completed',
         dependencies: ['idea-1'],
+        history: [
+          {
+            content: 'The MVP will focus on the core document editor.',
+            timestamp: new Date('2024-01-03T09:00:00')
+          },
+          {
+            content: 'The MVP will focus on the core document editor and visualization.',
+            timestamp: new Date('2024-01-03T14:30:00')
+          }
+        ]
       },
       {
         id: 'sec-4',
@@ -143,6 +153,20 @@ const INITIAL_DOCS: Document[] = [
         title: 'Overview',
         content: 'The dashboard is not a list, but a spatial view of all projects. It should feel like an infinite canvas where project trees grow organically.',
         status: 'completed',
+        history: [
+          {
+            content: 'The dashboard is a list of projects.',
+            timestamp: new Date('2024-01-07T10:15:00')
+          },
+          {
+            content: 'The dashboard should be a spatial view, not a list.',
+            timestamp: new Date('2024-01-07T11:45:00')
+          },
+          {
+            content: 'The dashboard is not a list, but a spatial view of all projects.',
+            timestamp: new Date('2024-01-08T09:30:00')
+          }
+        ]
       },
       {
         id: 'sec-7',
@@ -170,6 +194,12 @@ const INITIAL_DOCS: Document[] = [
         title: 'User Journey',
         content: 'User lands on dashboard -> Sees high-level project nodes -> Zooms in to see spec details -> Clicks node to edit.',
         status: 'completed',
+        history: [
+          {
+            content: 'User lands on dashboard -> Clicks project.',
+            timestamp: new Date('2024-01-09T13:00:00')
+          }
+        ]
       },
       {
         id: 'sec-9',
