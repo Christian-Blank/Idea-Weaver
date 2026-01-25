@@ -9,6 +9,7 @@ export interface Rule {
   name: string;
   instruction: string;
   category: 'Style' | 'Format' | 'Tone' | 'Safety' | 'Custom';
+  history?: { instruction: string; timestamp: Date; }[];
 }
 
 export interface RuleGroup {
@@ -500,7 +501,20 @@ export function DocumentProvider({ children }: { children: React.ReactNode }) {
   };
   
   const addRule = (r: Rule) => setRules(prev => [...prev, r]);
-  const updateRule = (id: string, updates: Partial<Rule>) => setRules(prev => prev.map(r => r.id === id ? { ...r, ...updates } : r));
+  const updateRule = (id: string, updates: Partial<Rule>) => setRules(prev => prev.map(r => {
+    if (r.id !== id) return r;
+    
+    // If instruction is changing, save to history
+    if (updates.instruction && updates.instruction !== r.instruction) {
+        const newHistory = [
+            { instruction: r.instruction, timestamp: new Date() },
+            ...(r.history || [])
+        ];
+        return { ...r, ...updates, history: newHistory };
+    }
+    
+    return { ...r, ...updates };
+  }));
   const deleteRule = (id: string) => setRules(prev => prev.filter(r => r.id !== id));
   
   const addRuleGroup = (rg: RuleGroup) => setRuleGroups(prev => [...prev, rg]);

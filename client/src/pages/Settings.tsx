@@ -385,9 +385,16 @@ export default function Settings() {
 
                         {editingRuleId && (
                             <div className="bg-slate-50 border border-slate-200 rounded-xl p-6 animate-in fade-in slide-in-from-top-4">
-                                <h3 className="font-medium mb-4 text-slate-900">
-                                    {editingRuleId === 'new' ? 'New Rule' : 'Edit Rule'}
-                                </h3>
+                                <div className="flex items-center justify-between mb-4">
+                                    <h3 className="font-medium text-slate-900">
+                                        {editingRuleId === 'new' ? 'New Rule' : 'Edit Rule'}
+                                    </h3>
+                                    {editingRuleId !== 'new' && (
+                                        <div className="text-xs text-slate-400 font-mono">
+                                            {ruleForm.history?.length || 0} revisions
+                                        </div>
+                                    )}
+                                </div>
                                 <div className="space-y-4">
                                     <div className="grid grid-cols-2 gap-4">
                                         <div>
@@ -423,6 +430,34 @@ export default function Settings() {
                                             className="bg-white min-h-[80px]"
                                         />
                                     </div>
+
+                                    {/* History View */}
+                                    {ruleForm.history && ruleForm.history.length > 0 && (
+                                        <div className="pt-2 border-t border-slate-200">
+                                            <label className="text-xs font-semibold uppercase text-slate-500 mb-2 block flex items-center gap-2">
+                                                <History size={12} /> Version History
+                                            </label>
+                                            <div className="space-y-2 max-h-[150px] overflow-y-auto">
+                                                {ruleForm.history.map((h, idx) => (
+                                                    <div key={idx} className="text-xs bg-white p-2 rounded border border-slate-100 flex flex-col gap-1 group">
+                                                        <div className="flex justify-between text-slate-400">
+                                                            <span>{new Date(h.timestamp).toLocaleString()}</span>
+                                                            <button 
+                                                                className="text-blue-500 hover:underline opacity-0 group-hover:opacity-100 transition-opacity"
+                                                                onClick={() => setRuleForm({ ...ruleForm, instruction: h.instruction })}
+                                                            >
+                                                                Restore
+                                                            </button>
+                                                        </div>
+                                                        <div className="text-slate-600 font-mono text-[10px] line-clamp-2">
+                                                            {h.instruction}
+                                                        </div>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    )}
+
                                     <div className="flex justify-end gap-2 pt-2">
                                         <Button variant="ghost" onClick={() => setEditingRuleId(null)}>Cancel</Button>
                                         <Button onClick={handleSaveRule}>Save Rule</Button>
