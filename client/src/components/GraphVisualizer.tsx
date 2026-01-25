@@ -54,12 +54,12 @@ export function GraphVisualizer({
             initial={false}
             animate={{ 
               scale: isActive ? 1.2 : 1,
-              backgroundColor: isActive ? 'var(--primary)' : 'var(--muted-foreground)'
             }}
             className={cn(
               "w-3 h-3 rounded-full border-2 border-background shadow-sm z-10 flex-shrink-0",
                doc.type === 'idea' ? 'bg-amber-400' : 
-               doc.type === 'spec' ? 'bg-blue-400' : 'bg-emerald-400'
+               doc.type === 'spec' ? 'bg-blue-400' : 'bg-emerald-400',
+               isActive && "ring-2 ring-primary ring-offset-1"
             )}
           />
           
