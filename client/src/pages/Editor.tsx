@@ -199,6 +199,21 @@ export default function Editor() {
       // We need useLocation for navigation
   };
 
+  // Calculate breadcrumbs
+  const breadcrumbs = [];
+  let current = doc;
+  // Safety break counter to prevent infinite loops in cyclic data
+  let safety = 0;
+  while (current && safety < 100) {
+    breadcrumbs.unshift(current);
+    if (current.parentId) {
+      current = getDocument(current.parentId);
+    } else {
+      current = null;
+    }
+    safety++;
+  }
+
   if (!doc) return <Layout><div className="p-8 text-center text-muted-foreground">Document not found</div></Layout>;
 
   return (
@@ -215,6 +230,40 @@ export default function Editor() {
         <ScrollArea className="flex-1 h-full bg-background/50">
           <div className="max-w-3xl mx-auto py-12 px-6 md:px-12 min-h-screen">
             
+            {/* Breadcrumbs Navigation */}
+            <div className="mb-8 flex items-center flex-wrap gap-2 text-sm text-muted-foreground/80 font-medium">
+               <Button 
+                 variant="ghost" 
+                 size="sm" 
+                 className="h-6 px-2 text-muted-foreground hover:text-primary"
+                 onClick={() => window.location.href = '/'}
+               >
+                 All Projects
+               </Button>
+               <span className="opacity-30">/</span>
+               
+               {breadcrumbs.map((crumb: any, index) => (
+                 <React.Fragment key={crumb.id}>
+                   <Button
+                     variant="ghost"
+                     size="sm"
+                     className={cn(
+                       "h-6 px-2 max-w-[150px] truncate",
+                       index === breadcrumbs.length - 1 
+                         ? "text-foreground font-semibold pointer-events-none" 
+                         : "text-muted-foreground hover:text-primary"
+                     )}
+                     onClick={() => window.location.href = `/editor/${crumb.id}`}
+                   >
+                     {crumb.title}
+                   </Button>
+                   {index < breadcrumbs.length - 1 && (
+                     <span className="opacity-30">/</span>
+                   )}
+                 </React.Fragment>
+               ))}
+            </div>
+
             {/* Parent Navigation (If exists) */}
             {parentDoc && (
                 <motion.div 
