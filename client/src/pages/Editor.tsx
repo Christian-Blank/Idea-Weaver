@@ -118,7 +118,7 @@ const SectionBlock = ({
                  <Button 
                    variant="ghost" 
                    size="icon" 
-                   className={cn("h-8 w-8 transition-opacity", showRules ? "text-primary opacity-100" : "text-muted-foreground opacity-0 group-hover:opacity-100")}
+                   className={cn("h-8 w-8 transition-colors", showRules ? "text-primary bg-accent/10" : "text-muted-foreground hover:text-foreground")}
                    onClick={() => setShowRules(!showRules)}
                  >
                    <Settings2 size={16} />
