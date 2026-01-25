@@ -165,7 +165,7 @@ export default function FlowDashboard() {
   const [, setLocation] = useLocation();
 
   // Transform documents to nodes and edges
-  const { initialNodes, initialEdges } = useMemo(() => {
+  const { nodes: initialNodes, edges: initialEdges } = useMemo(() => {
     const nodes: Node[] = [];
     const edges: Edge[] = [];
 
