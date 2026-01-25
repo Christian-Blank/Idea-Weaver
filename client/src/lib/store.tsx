@@ -12,6 +12,8 @@ export interface Section {
   status: 'draft' | 'generating' | 'review' | 'completed';
   aiSuggestions?: string[];
   dependencies?: string[]; // IDs of other sections or docs this depends on
+  rules?: string; // Instructions for AI on how to process changes
+  executionMode?: 'manual' | 'auto' | 'disabled';
 }
 
 export interface Document {

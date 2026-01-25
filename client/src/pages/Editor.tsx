@@ -16,7 +16,11 @@ import {
   Plus,
   PanelRightClose,
   PanelRightOpen,
-  GitBranch
+  GitBranch,
+  Settings2,
+  Play,
+  History,
+  AlertCircle
 } from 'lucide-react';
 import { 
   DropdownMenu, 
@@ -24,6 +28,11 @@ import {
   DropdownMenuItem, 
   DropdownMenuTrigger 
 } from '../components/ui/dropdown-menu';
+import { 
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "../components/ui/tooltip";
 import { cn } from '../lib/utils';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -37,7 +46,12 @@ const SectionBlock = ({
   onUpdate: (id: string, updates: Partial<Section>) => void 
 }) => {
   const [isEditing, setIsEditing] = useState(false);
+  const [showRules, setShowRules] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  
+  // Default values if not present
+  const executionMode = section.executionMode || 'disabled';
+  const rules = section.rules || '';
 
   // Auto-resize textarea
   useEffect(() => {
@@ -49,15 +63,27 @@ const SectionBlock = ({
 
   const simulateAI = () => {
     onUpdate(section.id, { status: 'generating' });
+    
+    // Simulate processing based on rules
     setTimeout(() => {
+      let suggestions = [
+        'Clarification: Specify the metrics for success here.',
+        'Stylistic: Use more active voice in the second paragraph.'
+      ];
+      
+      if (rules.toLowerCase().includes('concise')) {
+        suggestions.push('Rule Check: Text could be 20% shorter to meet "Concise" rule.');
+      }
+      
       onUpdate(section.id, { 
         status: 'review',
-        aiSuggestions: [
-          'Clarification: Specify the metrics for success here.',
-          'Stylistic: Use more active voice in the second paragraph.'
-        ]
+        aiSuggestions: suggestions
       });
     }, 2000);
+  };
+
+  const handleModeChange = (mode: 'manual' | 'auto' | 'disabled') => {
+    onUpdate(section.id, { executionMode: mode });
   };
 
   return (
@@ -86,6 +112,22 @@ const SectionBlock = ({
             placeholder="Section Title..."
           />
           <div className="flex items-center gap-1">
+             {/* Rules Toggle */}
+             <Tooltip>
+               <TooltipTrigger asChild>
+                 <Button 
+                   variant="ghost" 
+                   size="icon" 
+                   className={cn("h-8 w-8 transition-opacity", showRules ? "text-primary opacity-100" : "text-muted-foreground opacity-0 group-hover:opacity-100")}
+                   onClick={() => setShowRules(!showRules)}
+                 >
+                   <Settings2 size={16} />
+                 </Button>
+               </TooltipTrigger>
+               <TooltipContent>AI Rules & Settings</TooltipContent>
+             </Tooltip>
+
+             {/* Status Indicator / AI Spinner */}
              {section.status === 'generating' && (
                <motion.div 
                  animate={{ rotate: 360 }}
@@ -94,6 +136,7 @@ const SectionBlock = ({
                  <RefreshCw size={14} className="text-accent" />
                </motion.div>
              )}
+
              <DropdownMenu>
                <DropdownMenuTrigger asChild>
                  <Button variant="ghost" size="icon" className="h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity">
@@ -110,6 +153,107 @@ const SectionBlock = ({
              </DropdownMenu>
           </div>
         </div>
+
+        {/* Rules Panel */}
+        <AnimatePresence>
+          {showRules && (
+            <motion.div
+              initial={{ height: 0, opacity: 0 }}
+              animate={{ height: 'auto', opacity: 1 }}
+              exit={{ height: 0, opacity: 0 }}
+              className="px-4 pb-4 overflow-hidden"
+            >
+              <div className="bg-muted/30 rounded-lg p-3 border border-border space-y-3">
+                <div className="flex items-center justify-between">
+                  <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                    AI Instructions
+                  </div>
+                  
+                  {/* Execution Mode Selector */}
+                  <div className="flex items-center bg-background rounded-md border p-0.5 shadow-sm">
+                    <Tooltip>
+                       <TooltipTrigger asChild>
+                         <button 
+                           onClick={() => handleModeChange('disabled')}
+                           className={cn(
+                             "px-2 py-1 rounded text-[10px] font-medium transition-colors",
+                             executionMode === 'disabled' ? "bg-muted text-foreground" : "text-muted-foreground hover:text-foreground"
+                           )}
+                         >
+                           Manual
+                         </button>
+                       </TooltipTrigger>
+                       <TooltipContent>Only run when I click</TooltipContent>
+                    </Tooltip>
+                    
+                    <div className="w-px h-3 bg-border mx-0.5" />
+                    
+                    <Tooltip>
+                       <TooltipTrigger asChild>
+                         <button 
+                           onClick={() => handleModeChange('manual')}
+                           className={cn(
+                             "px-2 py-1 rounded text-[10px] font-medium transition-colors",
+                             executionMode === 'manual' ? "bg-amber-100 text-amber-700" : "text-muted-foreground hover:text-foreground"
+                           )}
+                         >
+                           Assisted
+                         </button>
+                       </TooltipTrigger>
+                       <TooltipContent>Suggest changes on request</TooltipContent>
+                    </Tooltip>
+
+                    <div className="w-px h-3 bg-border mx-0.5" />
+
+                    <Tooltip>
+                       <TooltipTrigger asChild>
+                         <button 
+                           onClick={() => handleModeChange('auto')}
+                           className={cn(
+                             "px-2 py-1 rounded text-[10px] font-medium transition-colors",
+                             executionMode === 'auto' ? "bg-emerald-100 text-emerald-700" : "text-muted-foreground hover:text-foreground"
+                           )}
+                         >
+                           Auto-Run
+                         </button>
+                       </TooltipTrigger>
+                       <TooltipContent>Run automatically on changes</TooltipContent>
+                    </Tooltip>
+                  </div>
+                </div>
+
+                <div className="relative">
+                  <Textarea
+                    value={rules}
+                    onChange={(e) => onUpdate(section.id, { rules: e.target.value })}
+                    className="min-h-[60px] text-xs bg-background resize-none"
+                    placeholder="e.g. Keep it concise, prioritize accessibility, use technical jargon..."
+                  />
+                  {/* Action Buttons */}
+                  <div className="absolute bottom-2 right-2 flex gap-1">
+                     {executionMode !== 'disabled' && (
+                       <Button 
+                         size="sm" 
+                         variant="default" 
+                         className="h-6 px-2 text-[10px]"
+                         onClick={simulateAI}
+                       >
+                         <Play size={10} className="mr-1" /> Run Now
+                       </Button>
+                     )}
+                  </div>
+                </div>
+
+                {/* History / Revert */}
+                <div className="flex justify-end pt-1">
+                   <Button variant="ghost" size="sm" className="h-6 text-[10px] text-muted-foreground hover:text-destructive gap-1">
+                     <History size={10} /> Revert to previous
+                   </Button>
+                </div>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
 
         {/* Content */}
         <div className="px-4 pb-4">
