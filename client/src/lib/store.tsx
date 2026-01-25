@@ -39,57 +39,178 @@ interface DocumentContextType {
 // --- Mock Data ---
 
 const INITIAL_DOCS: Document[] = [
+  // 1. Idea Document (North Star)
   {
-    id: 'doc-1',
-    title: 'New Social App Idea',
+    id: 'idea-1',
+    title: 'FlowState - The AI Creative Suite',
     type: 'idea',
-    childrenIds: ['doc-2'],
-    createdAt: new Date(),
-    updatedAt: new Date(),
+    childrenIds: ['spec-1'],
+    createdAt: new Date('2024-01-01'),
+    updatedAt: new Date('2024-01-02'),
     sections: [
       {
         id: 'sec-1',
         type: 'text',
-        title: 'Core Concept',
-        content: 'A social network focused on deep work and flow state sharing. Users broadcast when they are entering "flow" and share their output afterwards.',
+        title: 'Vision',
+        content: 'FlowState is an AI-native document studio designed to help product teams move from raw ideas to fully specified features without friction. It treats documents as a living graph, where changes in an idea propagate to specs and designs.',
         status: 'completed',
       },
       {
         id: 'sec-2',
         type: 'list',
-        title: 'Key Features',
-        content: '- Live Flow Status\n- Pomodoro Integration\n- "Deep Work" Leaderboards\n- No Distraction Mode',
+        title: 'Core Values',
+        content: '- Flow over Form\n- Connected Intelligence\n- Living Documents\n- AI as a Partner, not a Tool',
         status: 'completed',
       }
     ]
   },
+
+  // 2. Product Spec (Derived from Idea)
   {
-    id: 'doc-2',
-    title: 'Flow App - Product Spec',
+    id: 'spec-1',
+    title: 'FlowState MVP Specification',
     type: 'spec',
-    parentId: 'doc-1',
-    childrenIds: [],
-    createdAt: new Date(),
-    updatedAt: new Date(),
+    parentId: 'idea-1',
+    childrenIds: ['spec-2', 'spec-3'],
+    createdAt: new Date('2024-01-03'),
+    updatedAt: new Date('2024-01-05'),
     sections: [
       {
         id: 'sec-3',
         type: 'text',
-        title: 'Overview',
-        content: 'Based on the "New Social App Idea", this specification details the MVP features for the flow state sharing application.',
-        status: 'draft',
-        dependencies: ['doc-1'],
-        aiSuggestions: [
-          'Alternative: Focus heavily on the "No Distraction Mode" as the USP.',
-          'Suggestion: Add a social accountability feature where friends can "nudge" you if you break flow.'
-        ]
+        title: 'Executive Summary',
+        content: 'The MVP will focus on the core document editor and the "context graph" visualization. Users must be able to branch documents and see the relationships between them.',
+        status: 'completed',
+        dependencies: ['idea-1'],
       },
       {
         id: 'sec-4',
         type: 'text',
-        title: 'User Stories',
-        content: '',
-        status: 'generating', 
+        title: 'Target Audience',
+        content: 'Product Managers, Founders, and Design Engineers who value speed and structure.',
+        status: 'completed',
+      }
+    ]
+  },
+
+  // 3. Feature Spec 1 (Authentication)
+  {
+    id: 'spec-2',
+    title: 'Feature: Authentication & Profiles',
+    type: 'spec',
+    parentId: 'spec-1',
+    childrenIds: [],
+    createdAt: new Date('2024-01-06'),
+    updatedAt: new Date('2024-01-06'),
+    sections: [
+      {
+        id: 'sec-5',
+        type: 'text',
+        title: 'Requirements',
+        content: 'Simple email/password login + Google Auth. User profiles should store "Creative Style" preferences for AI tuning.',
+        status: 'review',
+        aiSuggestions: ['Suggestion: Add GitHub auth for engineering-focused users.']
+      }
+    ]
+  },
+
+  // 4. Feature Spec 2 (Dashboard) - The complex one
+  {
+    id: 'spec-3',
+    title: 'Feature: Infinite Canvas Dashboard',
+    type: 'spec',
+    parentId: 'spec-1',
+    childrenIds: ['flow-1', 'spec-4', 'spec-5'],
+    createdAt: new Date('2024-01-07'),
+    updatedAt: new Date('2024-01-08'),
+    sections: [
+      {
+        id: 'sec-6',
+        type: 'text',
+        title: 'Overview',
+        content: 'The dashboard is not a list, but a spatial view of all projects. It should feel like an infinite canvas where project trees grow organically.',
+        status: 'completed',
+      },
+      {
+        id: 'sec-7',
+        type: 'list',
+        title: 'Interactions',
+        content: '- Pan and Zoom\n- Click to Enter Document\n- Drag to Reorganize Trees',
+        status: 'completed',
+      }
+    ]
+  },
+
+  // 5. UX Flow (Derived from Dashboard Spec)
+  {
+    id: 'flow-1',
+    title: 'Dashboard Interaction Flow',
+    type: 'flow',
+    parentId: 'spec-3',
+    childrenIds: [],
+    createdAt: new Date('2024-01-09'),
+    updatedAt: new Date('2024-01-09'),
+    sections: [
+      {
+        id: 'sec-8',
+        type: 'text',
+        title: 'User Journey',
+        content: 'User lands on dashboard -> Sees high-level project nodes -> Zooms in to see spec details -> Clicks node to edit.',
+        status: 'completed',
+      },
+      {
+        id: 'sec-9',
+        type: 'text',
+        title: 'Edge Cases',
+        content: 'Empty state: Show a pulsing "New Idea" seed in the center of the screen.',
+        status: 'draft',
+      }
+    ]
+  },
+
+  // 6. Design Spec (Derived from Dashboard Spec)
+  {
+    id: 'spec-4',
+    title: 'Dashboard UI/Visual Spec',
+    type: 'spec',
+    parentId: 'spec-3',
+    childrenIds: [],
+    createdAt: new Date('2024-01-10'),
+    updatedAt: new Date('2024-01-10'),
+    sections: [
+      {
+        id: 'sec-10',
+        type: 'text',
+        title: 'Visual Language',
+        content: 'Use the "Cognitive Flow" theme. Connecting lines should be bezier curves with animated pulses to show data flow.',
+        status: 'completed',
+      }
+    ]
+  },
+
+  // 7. Eng Spec (Derived from Dashboard Spec)
+  {
+    id: 'spec-5',
+    title: 'Dashboard Technical Implementation',
+    type: 'spec',
+    parentId: 'spec-3',
+    childrenIds: [],
+    createdAt: new Date('2024-01-11'),
+    updatedAt: new Date('2024-01-11'),
+    sections: [
+      {
+        id: 'sec-11',
+        type: 'code',
+        title: 'Data Structure',
+        content: 'interface Node {\n  id: string;\n  position: { x: number, y: number };\n  children: Node[];\n}',
+        status: 'completed',
+      },
+      {
+        id: 'sec-12',
+        type: 'text',
+        title: 'Performance',
+        content: 'Use HTML Canvas for the graph if node count > 100. Otherwise SVG is fine.',
+        status: 'review',
       }
     ]
   }
