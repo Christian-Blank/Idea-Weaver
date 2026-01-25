@@ -99,9 +99,13 @@ interface DocumentContextType {
   currentDocId: string | null;
   currentUser: UserProfile;
   userProfiles: UserProfile[];
+  isAuthenticated: boolean;
   setCurrentDocId: (id: string | null) => void;
   setCurrentUser: (user: UserProfile) => void;
   updateUserProfile: (id: string, updates: Partial<UserProfile>) => void;
+  login: (email: string) => boolean;
+  logout: () => void;
+  signup: (name: string, email: string) => void;
   createDocument: (type: string, parentId?: string, templateId?: string) => string;
   updateSection: (docId: string, sectionId: string, updates: Partial<Section>) => void;
   updateDocument: (id: string, updates: Partial<Document>) => void;
@@ -524,6 +528,35 @@ export function DocumentProvider({ children }: { children: React.ReactNode }) {
   // User Management State
   const [userProfiles, setUserProfiles] = useState<UserProfile[]>(INITIAL_PROFILES);
   const [currentUser, setCurrentUser] = useState<UserProfile>(INITIAL_PROFILES[0]);
+  const [isAuthenticated, setIsAuthenticated] = useState(false); // Start unauthenticated for demo
+
+  const login = (email: string) => {
+    const user = userProfiles.find(u => u.email === email);
+    if (user) {
+        setCurrentUser(user);
+        setIsAuthenticated(true);
+        return true;
+    }
+    return false;
+  };
+
+  const logout = () => {
+    setIsAuthenticated(false);
+  };
+
+  const signup = (name: string, email: string) => {
+      const newUser: UserProfile = {
+          id: `u-${Date.now()}`,
+          name,
+          email,
+          role: 'New User',
+          avatar: name.split(' ').map(n => n[0]).join('').toUpperCase().substring(0, 2),
+          personalRules: ''
+      };
+      setUserProfiles(prev => [...prev, newUser]);
+      setCurrentUser(newUser);
+      setIsAuthenticated(true);
+  };
 
   const resolveRules = (custom?: string, ruleIds?: string[], groupIds?: string[]) => {
       let resolved = '';
@@ -851,9 +884,13 @@ export function DocumentProvider({ children }: { children: React.ReactNode }) {
     currentDocId,
     currentUser,
     userProfiles,
+    isAuthenticated,
     setCurrentDocId,
     setCurrentUser,
     updateUserProfile,
+    login,
+    logout,
+    signup,
     createDocument,
     updateSection,
     updateDocument,

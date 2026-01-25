@@ -8,15 +8,21 @@ import {
   Settings, 
   Menu,
   Home,
-  UserCircle
+  UserCircle,
+  LogOut
 } from 'lucide-react';
 import { Sheet, SheetContent, SheetTrigger } from './ui/sheet';
 import { cn } from '../lib/utils';
 
 export function Layout({ children }: { children: React.ReactNode }) {
   const [location, setLocation] = useLocation();
-  const { documents, createDocument, setCurrentDocId, currentUser } = useDocuments();
+  const { documents, createDocument, setCurrentDocId, currentUser, logout } = useDocuments();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = React.useState(false);
+
+  const handleLogout = () => {
+    logout();
+    setLocation('/login');
+  };
 
   const NavContent = () => (
     <div className="flex flex-col h-full bg-sidebar border-r border-sidebar-border w-64 p-4">
@@ -113,6 +119,14 @@ export function Layout({ children }: { children: React.ReactNode }) {
         >
           <Settings size={16} />
           Settings
+        </Button>
+        <Button 
+            variant="ghost"
+            className="w-full justify-start gap-2 text-red-500/80 hover:text-red-600 hover:bg-red-50"
+            onClick={handleLogout}
+        >
+          <LogOut size={16} />
+          Sign Out
         </Button>
       </div>
     </div>
