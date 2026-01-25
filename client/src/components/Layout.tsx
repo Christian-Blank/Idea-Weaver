@@ -7,14 +7,15 @@ import {
   GitBranch, 
   Settings, 
   Menu,
-  Home
+  Home,
+  UserCircle
 } from 'lucide-react';
 import { Sheet, SheetContent, SheetTrigger } from './ui/sheet';
 import { cn } from '../lib/utils';
 
 export function Layout({ children }: { children: React.ReactNode }) {
   const [location, setLocation] = useLocation();
-  const { documents, createDocument, setCurrentDocId } = useDocuments();
+  const { documents, createDocument, setCurrentDocId, currentUser } = useDocuments();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = React.useState(false);
 
   const NavContent = () => (
@@ -94,8 +95,22 @@ export function Layout({ children }: { children: React.ReactNode }) {
         </div>
       </div>
 
-      <div className="mt-auto pt-4 border-t border-sidebar-border">
-        <Button variant="ghost" className="w-full justify-start gap-2 text-muted-foreground">
+      <div className="mt-auto pt-4 border-t border-sidebar-border space-y-1">
+        <Button 
+            variant={location === '/profile' ? 'secondary' : 'ghost'}
+            className="w-full justify-start gap-2 text-muted-foreground"
+            onClick={() => setLocation('/profile')}
+        >
+          <div className="w-5 h-5 rounded-full bg-slate-200 flex items-center justify-center text-[10px] font-bold text-slate-600">
+            {currentUser.avatar || <UserCircle size={16} />}
+          </div>
+          {currentUser.name}
+        </Button>
+        <Button 
+            variant={location === '/settings' ? 'secondary' : 'ghost'}
+            className="w-full justify-start gap-2 text-muted-foreground"
+            onClick={() => setLocation('/settings')}
+        >
           <Settings size={16} />
           Settings
         </Button>

@@ -34,12 +34,22 @@ export interface Section {
   history?: { content: string; timestamp: Date; user: string; }[];
 }
 
+export interface UserProfile {
+  id: string;
+  name: string;
+  email: string;
+  role: string;
+  avatar?: string;
+  personalRules: string; // Global rules applied to everything this user touches
+}
+
 export interface DocumentHistoryItem {
   id: string;
   timestamp: Date;
   actor: 'User' | 'AI' | 'System';
   action: string;
   description?: string;
+  userId?: string;
 }
 
 export interface DocumentType {
@@ -87,7 +97,11 @@ interface DocumentContextType {
   rules: Rule[];
   ruleGroups: RuleGroup[];
   currentDocId: string | null;
+  currentUser: UserProfile;
+  userProfiles: UserProfile[];
   setCurrentDocId: (id: string | null) => void;
+  setCurrentUser: (user: UserProfile) => void;
+  updateUserProfile: (id: string, updates: Partial<UserProfile>) => void;
   createDocument: (type: string, parentId?: string, templateId?: string) => string;
   updateSection: (docId: string, sectionId: string, updates: Partial<Section>) => void;
   updateDocument: (id: string, updates: Partial<Document>) => void;
@@ -116,6 +130,33 @@ interface DocumentContextType {
 }
 
 // --- Mock Data ---
+
+const INITIAL_PROFILES: UserProfile[] = [
+  {
+    id: 'u-1',
+    name: 'Alex Chen',
+    email: 'alex@flowstate.ai',
+    role: 'Product Manager',
+    avatar: 'AC',
+    personalRules: 'Always clarify the "Why" before the "What". Prefer concise, bulleted lists over long paragraphs.'
+  },
+  {
+    id: 'u-2',
+    name: 'Sarah Jones',
+    email: 'sarah@flowstate.ai',
+    role: 'Lead Engineer',
+    avatar: 'SJ',
+    personalRules: 'Include technical feasibility notes. Use precise technical terminology. Default to TypeScript examples.'
+  },
+  {
+    id: 'u-3',
+    name: 'Mike Ross',
+    email: 'mike@flowstate.ai',
+    role: 'Product Designer',
+    avatar: 'MR',
+    personalRules: 'Focus on user emotional state and cognitive load. Describe interactions spatially.'
+  }
+];
 
 const INITIAL_RULES: Rule[] = [
   { id: 'r-concise', name: 'Concise', category: 'Style', instruction: 'Be concise and direct. Avoid fluff and filler words.' },
@@ -470,10 +511,19 @@ export function DocumentProvider({ children }: { children: React.ReactNode }) {
   const [currentDocId, setCurrentDocId] = useState<string | null>(null);
   const [projectRules, setProjectRules] = useState<string>(INITIAL_PROJECT_RULES);
 
+  // User Management State
+  const [userProfiles, setUserProfiles] = useState<UserProfile[]>(INITIAL_PROFILES);
+  const [currentUser, setCurrentUser] = useState<UserProfile>(INITIAL_PROFILES[0]);
+
   const resolveRules = (custom?: string, ruleIds?: string[], groupIds?: string[]) => {
       let resolved = '';
       
-      // Add active groups
+      // 1. Personal Rules (Always applied for this user)
+      if (currentUser.personalRules) {
+        resolved += `PERSONAL PREFERENCES (${currentUser.name}):\n${currentUser.personalRules}\n\n`;
+      }
+
+      // 2. Add active groups
       if (groupIds) {
           groupIds.forEach(gid => {
               const group = ruleGroups.find(g => g.id === gid);
@@ -486,7 +536,7 @@ export function DocumentProvider({ children }: { children: React.ReactNode }) {
           });
       }
 
-      // Add active individual rules
+      // 3. Add active individual rules
       if (ruleIds) {
           ruleIds.forEach(rid => {
               const rule = rules.find(r => r.id === rid);
@@ -494,10 +544,17 @@ export function DocumentProvider({ children }: { children: React.ReactNode }) {
           });
       }
 
-      // Add custom rules override
+      // 4. Add custom rules override
       if (custom) resolved += `${custom}\n`;
       
       return resolved.trim();
+  };
+
+  const updateUserProfile = (id: string, updates: Partial<UserProfile>) => {
+    setUserProfiles(prev => prev.map(u => u.id === id ? { ...u, ...updates } : u));
+    if (currentUser.id === id) {
+        setCurrentUser(prev => ({ ...prev, ...updates }));
+    }
   };
   
   const addRule = (r: Rule) => setRules(prev => [...prev, r]);
@@ -507,7 +564,7 @@ export function DocumentProvider({ children }: { children: React.ReactNode }) {
     // If instruction is changing, save to history
     if (updates.instruction && updates.instruction !== r.instruction) {
         const newHistory = [
-            { instruction: r.instruction, timestamp: new Date(), user: 'You' },
+            { instruction: r.instruction, timestamp: new Date(), user: currentUser.name }, // Use real user name
             ...(r.history || [])
         ];
         return { ...r, ...updates, history: newHistory };
@@ -713,41 +770,47 @@ export function DocumentProvider({ children }: { children: React.ReactNode }) {
       setDocumentTypes(prev => prev.filter(dt => dt.id !== id));
   };
 
+  const value = {
+    documents,
+    documentTypes,
+    templates,
+    rules,
+    ruleGroups,
+    currentDocId,
+    currentUser,
+    userProfiles,
+    setCurrentDocId,
+    setCurrentUser,
+    updateUserProfile,
+    createDocument,
+    updateSection,
+    updateDocument,
+    addSection,
+    generateChildDocument,
+    getDocument,
+    getObjectType,
+    projectRules,
+    setProjectRules,
+    addDocumentType,
+    updateDocumentType,
+    deleteDocumentType,
+    addTemplate,
+    updateTemplate,
+    deleteTemplate,
+    duplicateTemplate,
+    deleteDocument,
+    duplicateDocument,
+    addRule,
+    updateRule,
+    deleteRule,
+    addRuleGroup,
+    updateRuleGroup,
+    deleteRuleGroup,
+    resolveRules
+  };
+
   return (
-    <DocumentContext.Provider value={{
-      documents,
-      documentTypes,
-      templates,
-      currentDocId,
-      setCurrentDocId,
-      createDocument,
-      updateSection,
-      updateDocument,
-      addSection,
-      generateChildDocument,
-      getDocument,
-      getObjectType,
-      projectRules,
-      setProjectRules,
-      addDocumentType,
-      updateDocumentType,
-      addTemplate,
-      updateTemplate,
-      deleteTemplate,
-      duplicateTemplate,
-      deleteDocument,
-      duplicateDocument,
-      deleteDocumentType,
-      rules,
-      ruleGroups,
-      addRule,
-      updateRule,
-      deleteRule,
-      addRuleGroup,
-      updateRuleGroup,
-      deleteRuleGroup,
-      resolveRules
-    }}>
+    <DocumentContext.Provider value={value}>
       {children}
     </DocumentContext.Provider>
   );

@@ -9,12 +9,15 @@ import Editor from "@/pages/Editor";
 import Settings from "@/pages/Settings";
 import NotFound from "@/pages/not-found";
 
+import Profile from "./pages/Profile";
+
 function Router() {
   return (
     <Switch>
       <Route path="/" component={Dashboard} />
       <Route path="/editor/:id" component={Editor} />
       <Route path="/settings" component={Settings} />
+      <Route path="/profile" component={Profile} />
       <Route component={NotFound} />
     </Switch>
   );
