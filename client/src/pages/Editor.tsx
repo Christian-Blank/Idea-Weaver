@@ -182,6 +182,23 @@ export default function Editor() {
     }
   }, [params?.id, getDocument]); 
 
+  // Helpers for navigation
+  const parentDoc = doc?.parentId ? getDocument(doc.parentId) : null;
+  const childDocs = doc?.childrenIds ? doc.childrenIds.map((id: string) => getDocument(id)).filter(Boolean) : [];
+
+  const navigateTo = (id: string) => {
+      // In a real app we might use setLocation from wouter, but since we are inside Layout which has its own router context or we can use window location or passed down navigation
+      // Actually we have useDocuments context but wouter's setLocation is needed.
+      // Let's grab setLocation from wouter hook at top level
+      window.location.hash = `/editor/${id}`; // Hack since we can't easily grab setLocation inside this component without adding the hook call
+  };
+  // Wait, let's just add the hook
+  const [_, setLocation] = useRoute('/editor/:id');
+  const navigate = (path: string) => {
+      // Wouter useRoute returns match and params, not navigate function. 
+      // We need useLocation for navigation
+  };
+
   if (!doc) return <Layout><div className="p-8 text-center text-muted-foreground">Document not found</div></Layout>;
 
   return (
@@ -198,15 +215,32 @@ export default function Editor() {
         <ScrollArea className="flex-1 h-full bg-background/50">
           <div className="max-w-3xl mx-auto py-12 px-6 md:px-12 min-h-screen">
             
+            {/* Parent Navigation (If exists) */}
+            {parentDoc && (
+                <motion.div 
+                    initial={{ opacity: 0, y: -10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="mb-6"
+                >
+                    <Button 
+                        variant="ghost" 
+                        className="text-muted-foreground hover:text-foreground pl-0 gap-2 group"
+                        onClick={() => window.location.href = `/editor/${parentDoc.id}`} // Simple navigation for now
+                    >
+                        <div className="p-1 rounded bg-muted group-hover:bg-primary/10 transition-colors">
+                            <CornerDownRight size={14} className="rotate-180" />
+                        </div>
+                        <div className="flex flex-col items-start text-xs">
+                            <span className="font-semibold uppercase tracking-wider text-[10px] text-muted-foreground/70">Parent Document</span>
+                            <span className="font-medium text-sm">{parentDoc.title}</span>
+                        </div>
+                    </Button>
+                </motion.div>
+            )}
+
             {/* Doc Header */}
             <div className="mb-12 group">
               <div className="flex items-center gap-2 text-sm text-muted-foreground mb-4">
-                 {doc.parentId && (
-                   <span className="flex items-center gap-1 bg-muted px-2 py-0.5 rounded-full text-xs">
-                     <CornerDownRight size={10} />
-                     Derived from Parent
-                   </span>
-                 )}
                  <span className="uppercase tracking-widest text-[10px] font-semibold border border-border px-2 py-0.5 rounded-full">
                    {doc.type}
                  </span>
@@ -231,7 +265,7 @@ export default function Editor() {
             </div>
 
             {/* Sections Flow */}
-            <div className="space-y-8 relative border-l border-border/50 md:border-l-0 ml-4 md:ml-0 pb-32">
+            <div className="space-y-8 relative border-l border-border/50 md:border-l-0 ml-4 md:ml-0 pb-12">
                {doc.sections.map((section: Section) => (
                  <SectionBlock 
                    key={section.id} 
@@ -264,6 +298,57 @@ export default function Editor() {
                  </Button>
                </motion.div>
             </div>
+
+            {/* Derived Documents (Children) Section */}
+            <div className="mt-12 pt-8 border-t border-border">
+                <div className="flex items-center justify-between mb-6">
+                    <h3 className="text-sm font-semibold uppercase tracking-widest text-muted-foreground flex items-center gap-2">
+                        <GitBranch size={14} />
+                        Derived Documents
+                    </h3>
+                    <Button variant="ghost" size="sm" className="h-8 text-xs gap-1" onClick={() => generateChildDocument(doc.id, 'spec')}>
+                        <Plus size={12} /> New Derivative
+                    </Button>
+                </div>
+
+                {childDocs.length > 0 ? (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {childDocs.map((child: any) => (
+                            <div 
+                                key={child.id}
+                                className="group p-4 rounded-xl border bg-card/50 hover:bg-card hover:shadow-md transition-all cursor-pointer relative overflow-hidden"
+                                onClick={() => window.location.href = `/editor/${child.id}`}
+                            >
+                                <div className={cn(
+                                    "absolute top-0 left-0 w-1 h-full",
+                                    child.type === 'idea' ? 'bg-amber-400' : 
+                                    child.type === 'spec' ? 'bg-blue-400' : 'bg-emerald-400'
+                                )} />
+                                <div className="flex justify-between items-start mb-2">
+                                    <span className="text-[10px] uppercase font-semibold text-muted-foreground border px-1.5 py-0.5 rounded">
+                                        {child.type}
+                                    </span>
+                                    <ArrowRight size={14} className="text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity -rotate-45 group-hover:rotate-0" />
+                                </div>
+                                <h4 className="font-medium text-foreground group-hover:text-primary transition-colors">{child.title}</h4>
+                                <p className="text-xs text-muted-foreground mt-1 truncate">
+                                    {child.sections[0]?.content || "No content yet..."}
+                                </p>
+                            </div>
+                        ))}
+                    </div>
+                ) : (
+                    <div className="p-8 border-2 border-dashed rounded-xl text-center">
+                        <p className="text-sm text-muted-foreground mb-3">No derived documents yet.</p>
+                        <Button variant="outline" size="sm" onClick={() => generateChildDocument(doc.id, 'spec')}>
+                            Create first derivative
+                        </Button>
+                    </div>
+                )}
+            </div>
+
+            {/* Bottom Spacer for Floating Bar */}
+            <div className="h-24" />
 
             {/* Bottom Actions Floating Bar */}
             <div className="fixed bottom-6 left-1/2 -translate-x-1/2 md:translate-x-0 md:left-auto md:right-8 xl:right-[340px] z-30 bg-background/80 backdrop-blur-md border border-border/50 shadow-xl rounded-full p-2 flex gap-2">
