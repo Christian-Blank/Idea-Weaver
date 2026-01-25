@@ -66,7 +66,7 @@ const SectionBlock = ({
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   
   // Get inherited rules
-  const { projectRules, getDocument, getObjectType, rules: libraryRules, ruleGroups, resolveRules } = useDocuments();
+  const { projectRules, getDocument, getObjectType, rules: libraryRules, ruleGroups, resolveRules, updateSection } = useDocuments();
   const currentDoc = getDocument(docId);
   const docRules = currentDoc?.rules || '';
   const docType = currentDoc ? getObjectType(currentDoc.type) : undefined;
@@ -201,14 +201,40 @@ const SectionBlock = ({
 
     // Push current state to history before restoring
     const newHistory = [
-      { content: section.content, timestamp: new Date(), user: 'You' },
+      { content: section.content, timestamp: new Date(), user: 'You (Revert)' },
       ...(section.history || [])
     ];
     
+    // 1. Restore this section
     onUpdate(section.id, { 
       content: previewContent,
       history: newHistory
     });
+
+    // 2. Cascading Revert Check (Simulated)
+    const downstream = allSections.filter(s => 
+        s.executionMode === 'auto' && 
+        s.history?.[0]?.causedBy === section.id
+    );
+
+    if (downstream.length > 0) {
+        downstream.forEach(ds => {
+            // Revert dependent section to its previous state (history[1] or empty)
+            const targetState = ds.history?.[1]; 
+            if (targetState) {
+                 const dsHistory = [
+                    { content: ds.content, timestamp: new Date(), user: 'System (Cascade Revert)', causedBy: section.id },
+                    ...(ds.history || [])
+                 ];
+                 
+                 updateSection(docId, ds.id, {
+                     content: targetState.content,
+                     history: dsHistory
+                 });
+            }
+        });
+    }
+
     setPreviewContent(null);
     setShowHistory(false);
   };
@@ -578,9 +604,16 @@ const SectionBlock = ({
                     history.map((item, idx) => (
                       <div key={idx} className="bg-background rounded-md border p-2 text-xs flex flex-col gap-2 group hover:border-primary/50 transition-colors">
                         <div className="flex justify-between items-center text-[10px] text-muted-foreground">
-                          <div className="flex flex-col">
+                          <div className="flex flex-col gap-0.5">
                               <span>{new Date(item.timestamp).toLocaleTimeString()} · {new Date(item.timestamp).toLocaleDateString()}</span>
-                              <span className="font-semibold text-primary/70">{item.user || 'Unknown User'}</span>
+                              <div className="flex items-center gap-1">
+                                <span className="font-semibold text-primary/70">{item.user || 'Unknown User'}</span>
+                                {item.causedBy && (
+                                    <span className="text-[9px] text-muted-foreground bg-muted px-1 rounded border">
+                                        Trigger: {allSections.find(s => s.id === item.causedBy)?.title || 'Unknown'}
+                                    </span>
+                                )}
+                              </div>
                           </div>
                           <Button 
                             size="sm" 

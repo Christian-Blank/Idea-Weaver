@@ -31,7 +31,7 @@ export interface Section {
   ruleIds?: string[]; // Active library rules
   groupIds?: string[]; // Active library rule groups
   executionMode?: 'manual' | 'auto' | 'disabled';
-  history?: { content: string; timestamp: Date; user: string; }[];
+  history?: { content: string; timestamp: Date; user: string; causedBy?: string; }[];
 }
 
 export interface UserProfile {
@@ -290,11 +290,13 @@ const INITIAL_DOCS: Document[] = [
         history: [
           {
             content: 'The MVP will focus on the core document editor.',
-            timestamp: new Date('2024-01-03T09:00:00')
+            timestamp: new Date('2024-01-03T09:00:00'),
+            user: 'Alex Chen'
           },
           {
             content: 'The MVP will focus on the core document editor and visualization.',
-            timestamp: new Date('2024-01-03T14:30:00')
+            timestamp: new Date('2024-01-03T14:30:00'),
+            user: 'Alex Chen'
           }
         ]
       },
@@ -304,6 +306,7 @@ const INITIAL_DOCS: Document[] = [
         title: 'Target Audience',
         content: 'Product Managers, Founders, and Design Engineers who value speed and structure.',
         status: 'completed',
+        history: [] // Added empty history to avoid missing property if accessed
       }
     ]
   },
@@ -328,11 +331,13 @@ const INITIAL_DOCS: Document[] = [
         history: [
           {
             content: 'Simple email/password login.',
-            timestamp: new Date('2024-01-06T10:00:00')
+            timestamp: new Date('2024-01-06T10:00:00'),
+            user: 'Sarah Jones'
           },
           {
             content: 'Simple email/password login + Google Auth.',
-            timestamp: new Date('2024-01-06T11:30:00')
+            timestamp: new Date('2024-01-06T11:30:00'),
+            user: 'Sarah Jones'
           }
         ]
       }
@@ -395,15 +400,18 @@ const INITIAL_DOCS: Document[] = [
         history: [
           {
             content: 'The dashboard is a list of projects.',
-            timestamp: new Date('2024-01-07T10:15:00')
+            timestamp: new Date('2024-01-07T10:15:00'),
+            user: 'Mike Ross'
           },
           {
             content: 'The dashboard should be a spatial view, not a list.',
-            timestamp: new Date('2024-01-07T11:45:00')
+            timestamp: new Date('2024-01-07T11:45:00'),
+            user: 'AI'
           },
           {
             content: 'The dashboard is not a list, but a spatial view of all projects.',
-            timestamp: new Date('2024-01-08T09:30:00')
+            timestamp: new Date('2024-01-08T09:30:00'),
+            user: 'Mike Ross'
           }
         ]
       },
@@ -413,6 +421,7 @@ const INITIAL_DOCS: Document[] = [
         title: 'Interactions',
         content: '- Pan and Zoom\n- Click to Enter Document\n- Drag to Reorganize Trees',
         status: 'completed',
+        history: [] // Added empty history
       }
     ]
   },
@@ -436,7 +445,8 @@ const INITIAL_DOCS: Document[] = [
         history: [
           {
             content: 'User lands on dashboard -> Clicks project.',
-            timestamp: new Date('2024-01-09T13:00:00')
+            timestamp: new Date('2024-01-09T13:00:00'),
+            user: 'Mike Ross'
           }
         ]
       },
@@ -632,15 +642,77 @@ export function DocumentProvider({ children }: { children: React.ReactNode }) {
   };
 
   const updateSection = (docId: string, sectionId: string, updates: Partial<Section>) => {
-    setDocuments(prev => prev.map(doc => {
-      if (doc.id !== docId) return doc;
-      return {
-        ...doc,
-        sections: doc.sections.map(sec => 
-          sec.id === sectionId ? { ...sec, ...updates } : sec
-        )
-      };
-    }));
+    setDocuments(prev => {
+        // Find the section before update to check changes if needed
+        const doc = prev.find(d => d.id === docId);
+        const oldSection = doc?.sections.find(s => s.id === sectionId);
+        const newContent = updates.content;
+        
+        // 1. Perform the Update
+        const updatedDocs = prev.map(d => {
+          if (d.id !== docId) return d;
+          return {
+            ...d,
+            sections: d.sections.map(sec => 
+              sec.id === sectionId ? { ...sec, ...updates } : sec
+            )
+          };
+        });
+
+        // 2. Check for Auto-Run Triggers (Simulated cascading)
+        // If content changed, find dependent sections in the SAME document
+        if (oldSection && newContent && newContent !== oldSection.content) {
+            // Find dependent sections in this doc
+            const dependents = doc?.sections.filter(s => s.dependencies?.includes(sectionId) && s.executionMode === 'auto');
+            
+            if (dependents && dependents.length > 0) {
+                // In a real app, this would queue an AI job.
+                // In mockup, we'll simulate an update after a delay
+                // We can't easily update state again inside setState, so we'll use a timeout
+                setTimeout(() => {
+                    dependents.forEach(dep => {
+                        // Trigger a mock update on dependent
+                        // We need access to the latest state, so we use the store setter again via a helper or assume context
+                        // Since we are inside the store logic, we can't call setDocuments directly easily without loop
+                        // But we can dispatch an event or just let the component handle it?
+                        // Actually, the Component (SectionBlock) handles simulation.
+                        // But 'Auto' mode means it should happen without user interaction.
+                        // Let's implement a simple "Chain Reaction" here by modifying state directly for the mockup
+                        
+                        setDocuments(currentDocs => currentDocs.map(cd => {
+                            if (cd.id !== docId) return cd;
+                            return {
+                                ...cd,
+                                sections: cd.sections.map(s => {
+                                    if (s.id === dep.id) {
+                                        // Simulate AI update
+                                        const newHistory = [
+                                            { 
+                                                content: s.content, 
+                                                timestamp: new Date(), 
+                                                user: 'AI (Auto-Run)',
+                                                causedBy: sectionId
+                                            },
+                                            ...(s.history || [])
+                                        ];
+                                        return {
+                                            ...s,
+                                            status: 'review',
+                                            content: s.content + `\n\n[Auto-Updated due to changes in "${oldSection.title || 'Parent'}"]`,
+                                            history: newHistory
+                                        };
+                                    }
+                                    return s;
+                                })
+                            };
+                        }));
+                    });
+                }, 1500);
+            }
+        }
+
+        return updatedDocs;
+    });
   };
 
   const updateDocument = (id: string, updates: Partial<Document>) => {
