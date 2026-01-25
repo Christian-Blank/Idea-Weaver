@@ -26,7 +26,9 @@ import {
   Bot,
   Link,
   Unlink,
-  AlertTriangle
+  AlertTriangle,
+  FileText,
+  Globe
 } from 'lucide-react';
 import { 
   DropdownMenu, 
@@ -59,6 +61,11 @@ const SectionBlock = ({
   const [previewContent, setPreviewContent] = useState<string | null>(null);
   const [dependencyError, setDependencyError] = useState<string | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  
+  // Get inherited rules
+  const { projectRules, getDocument } = useDocuments();
+  const currentDoc = getDocument(docId);
+  const docRules = currentDoc?.rules || '';
   
   // Default values if not present
   const executionMode = section.executionMode || 'disabled';
@@ -118,6 +125,22 @@ const SectionBlock = ({
         'Clarification: Specify the metrics for success here.',
         'Stylistic: Use more active voice in the second paragraph.'
       ];
+      
+      const fullPrompt = `
+        Project Rules: ${projectRules}
+        Document Rules: ${docRules}
+        Section Rules: ${rules}
+        Content: ${section.content}
+      `;
+      
+      // Basic simulation of rule checking
+      if (projectRules.toLowerCase().includes('professional')) {
+        suggestions.push('Project Rule Check: Tone matches professional standard.');
+      }
+      
+      if (docRules.toLowerCase().includes('vision')) {
+        suggestions.push('Document Rule Check: Ensure vision statement is inspiring.');
+      }
       
       if (rules.toLowerCase().includes('concise')) {
         suggestions.push('Rule Check: Text could be 20% shorter to meet "Concise" rule.');
@@ -260,9 +283,35 @@ const SectionBlock = ({
               className="px-4 pb-4 overflow-hidden"
             >
               <div className="bg-muted/30 rounded-lg p-3 border border-border space-y-3">
+                
+                {/* Inherited Rules Display */}
+                {(projectRules || docRules) && (
+                  <div className="space-y-2 pb-2 border-b border-border/50">
+                    <div className="text-[10px] uppercase font-bold text-muted-foreground/70 tracking-widest flex items-center gap-1">
+                      <GitBranch size={10} className="rotate-180" /> Inherited Rules
+                    </div>
+                    {projectRules && (
+                      <div className="text-[10px] text-muted-foreground bg-background/50 p-2 rounded border border-border/50">
+                        <span className="font-semibold text-primary/70 block mb-0.5 flex items-center gap-1">
+                          <Globe size={10} /> Project Level
+                        </span>
+                        <p className="line-clamp-2 italic">{projectRules}</p>
+                      </div>
+                    )}
+                    {docRules && (
+                      <div className="text-[10px] text-muted-foreground bg-background/50 p-2 rounded border border-border/50">
+                        <span className="font-semibold text-blue-500/70 block mb-0.5 flex items-center gap-1">
+                          <FileText size={10} /> Document Level
+                        </span>
+                        <p className="line-clamp-2 italic">{docRules}</p>
+                      </div>
+                    )}
+                  </div>
+                )}
+
                 <div className="flex items-center justify-between">
                   <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-                    AI Instructions
+                    Section Instructions
                   </div>
                   
                   {/* Execution Mode Selector */}
@@ -554,10 +603,11 @@ const SectionBlock = ({
 
 export default function Editor() {
   const [match, params] = useRoute('/editor/:id');
-  const { getDocument, updateSection, addSection, generateChildDocument } = useDocuments();
+  const { getDocument, updateSection, addSection, generateChildDocument, updateDocument, projectRules } = useDocuments();
   const [doc, setDoc] = useState<any>(null);
   const [showGraph, setShowGraph] = useState(true);
   const [showDocHistory, setShowDocHistory] = useState(false);
+  const [showDocSettings, setShowDocSettings] = useState(false);
 
   // Effect to handle document changes/routing
   useEffect(() => {
@@ -688,10 +738,23 @@ export default function Editor() {
                     "h-8 gap-2 text-xs font-medium transition-colors", 
                     showDocHistory ? "text-primary bg-primary/5" : "text-muted-foreground hover:text-foreground"
                   )}
-                  onClick={() => setShowDocHistory(!showDocHistory)}
+                  onClick={() => { setShowDocHistory(!showDocHistory); setShowDocSettings(false); }}
                 >
                   <History size={14} />
                   <span>History</span>
+                </Button>
+
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  className={cn(
+                    "h-8 gap-2 text-xs font-medium transition-colors", 
+                    showDocSettings ? "text-primary bg-primary/5" : "text-muted-foreground hover:text-foreground"
+                  )}
+                  onClick={() => { setShowDocSettings(!showDocSettings); setShowDocHistory(false); }}
+                >
+                  <Settings2 size={14} />
+                  <span>Settings</span>
                 </Button>
               </div>
               
@@ -718,6 +781,53 @@ export default function Editor() {
                 )}
               </div>
             </div>
+
+            {/* Document Settings Panel */}
+            <AnimatePresence>
+                {showDocSettings && (
+                    <motion.div
+                        initial={{ opacity: 0, height: 0 }}
+                        animate={{ opacity: 1, height: 'auto' }}
+                        exit={{ opacity: 0, height: 0 }}
+                        className="mb-12 overflow-hidden"
+                    >
+                        <div className="bg-muted/30 border border-border rounded-xl p-6 relative">
+                            <h3 className="text-sm font-semibold uppercase tracking-widest text-muted-foreground mb-6 flex items-center gap-2">
+                                <Settings2 size={14} /> Document Configuration
+                            </h3>
+
+                            <div className="space-y-4 max-w-2xl">
+                                <div className="space-y-2">
+                                    <label className="text-sm font-medium text-foreground flex items-center gap-2">
+                                        <FileText size={14} className="text-blue-500" />
+                                        Document-Wide Rules
+                                    </label>
+                                    <p className="text-xs text-muted-foreground">
+                                        These rules apply to every section in this document.
+                                    </p>
+                                    <Textarea 
+                                        value={doc.rules || ''}
+                                        onChange={(e) => updateDocument(doc.id, { rules: e.target.value })}
+                                        placeholder="e.g. Use a formal tone, focus on technical constraints..."
+                                        className="bg-background min-h-[100px]"
+                                    />
+                                </div>
+                                
+                                {projectRules && (
+                                    <div className="pt-4 border-t border-border/50">
+                                        <div className="text-xs font-semibold text-muted-foreground mb-2 flex items-center gap-2">
+                                            <Globe size={12} /> Inherited Project Rules
+                                        </div>
+                                        <div className="text-xs text-muted-foreground bg-background/50 p-3 rounded border border-border/50 italic">
+                                            {projectRules}
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
 
             {/* Document History Panel */}
             <AnimatePresence>

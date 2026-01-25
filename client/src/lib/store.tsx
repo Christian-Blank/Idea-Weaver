@@ -33,6 +33,7 @@ export interface Document {
   childrenIds: string[];
   sections: Section[];
   history?: DocumentHistoryItem[];
+  rules?: string; // Document-wide rules
   createdAt: Date;
   updatedAt: Date;
 }
@@ -43,12 +44,19 @@ interface DocumentContextType {
   setCurrentDocId: (id: string | null) => void;
   createDocument: (type: Document['type'], parentId?: string) => string;
   updateSection: (docId: string, sectionId: string, updates: Partial<Section>) => void;
+  updateDocument: (id: string, updates: Partial<Document>) => void;
   addSection: (docId: string, section: Section) => void;
   generateChildDocument: (parentId: string, type: Document['type']) => void;
   getDocument: (id: string) => Document | undefined;
+  projectRules: string;
+  setProjectRules: (rules: string) => void;
 }
 
 // --- Mock Data ---
+
+const INITIAL_PROJECT_RULES = `Always maintain a professional but creative tone.
+Prioritize user experience and accessibility.
+Use "Cognitive Flow" terminology where appropriate.`;
 
 const INITIAL_DOCS: Document[] = [
   // 1. Idea Document (North Star)
@@ -56,6 +64,7 @@ const INITIAL_DOCS: Document[] = [
     id: 'idea-1',
     title: 'FlowState - The AI Creative Suite',
     type: 'idea',
+    rules: 'Focus on high-level vision and emotional resonance. Avoid technical implementation details.',
     childrenIds: ['spec-1'],
     createdAt: new Date('2024-01-01'),
     updatedAt: new Date('2024-01-02'),
@@ -312,6 +321,7 @@ const DocumentContext = createContext<DocumentContextType | undefined>(undefined
 export function DocumentProvider({ children }: { children: React.ReactNode }) {
   const [documents, setDocuments] = useState<Document[]>(INITIAL_DOCS);
   const [currentDocId, setCurrentDocId] = useState<string | null>(null);
+  const [projectRules, setProjectRules] = useState<string>(INITIAL_PROJECT_RULES);
 
   const createDocument = (type: Document['type'], parentId?: string) => {
     const newDoc: Document = {
@@ -360,6 +370,12 @@ export function DocumentProvider({ children }: { children: React.ReactNode }) {
     }));
   };
 
+  const updateDocument = (id: string, updates: Partial<Document>) => {
+    setDocuments(prev => prev.map(doc => 
+      doc.id === id ? { ...doc, ...updates } : doc
+    ));
+  };
+
   const addSection = (docId: string, section: Section) => {
     setDocuments(prev => prev.map(doc => {
       if (doc.id !== docId) return doc;
@@ -386,9 +402,12 @@ export function DocumentProvider({ children }: { children: React.ReactNode }) {
       setCurrentDocId,
       createDocument,
       updateSection,
+      updateDocument,
       addSection,
       generateChildDocument,
-      getDocument
+      getDocument,
+      projectRules,
+      setProjectRules
     }}>
       {children}
     </DocumentContext.Provider>
