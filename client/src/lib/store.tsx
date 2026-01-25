@@ -14,6 +14,7 @@ export interface Section {
   dependencies?: string[]; // IDs of other sections or docs this depends on
   rules?: string; // Instructions for AI on how to process changes
   executionMode?: 'manual' | 'auto' | 'disabled';
+  history?: { content: string; timestamp: Date; }[];
 }
 
 export interface Document {
@@ -111,7 +112,17 @@ const INITIAL_DOCS: Document[] = [
         title: 'Requirements',
         content: 'Simple email/password login + Google Auth. User profiles should store "Creative Style" preferences for AI tuning.',
         status: 'review',
-        aiSuggestions: ['Suggestion: Add GitHub auth for engineering-focused users.']
+        aiSuggestions: ['Suggestion: Add GitHub auth for engineering-focused users.'],
+        history: [
+          {
+            content: 'Simple email/password login.',
+            timestamp: new Date('2024-01-06T10:00:00')
+          },
+          {
+            content: 'Simple email/password login + Google Auth.',
+            timestamp: new Date('2024-01-06T11:30:00')
+          }
+        ]
       }
     ]
   },

@@ -47,11 +47,13 @@ const SectionBlock = ({
 }) => {
   const [isEditing, setIsEditing] = useState(false);
   const [showRules, setShowRules] = useState(false);
+  const [showHistory, setShowHistory] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   
   // Default values if not present
   const executionMode = section.executionMode || 'disabled';
   const rules = section.rules || '';
+  const history = section.history || [];
 
   // Auto-resize textarea
   useEffect(() => {
@@ -84,6 +86,20 @@ const SectionBlock = ({
 
   const handleModeChange = (mode: 'manual' | 'auto' | 'disabled') => {
     onUpdate(section.id, { executionMode: mode });
+  };
+
+  const restoreVersion = (version: { content: string, timestamp: Date }) => {
+    // Push current state to history before restoring
+    const newHistory = [
+      { content: section.content, timestamp: new Date() },
+      ...(section.history || [])
+    ];
+    
+    onUpdate(section.id, { 
+      content: version.content,
+      history: newHistory
+    });
+    setShowHistory(false);
   };
 
   return (
@@ -119,12 +135,27 @@ const SectionBlock = ({
                    variant="ghost" 
                    size="icon" 
                    className={cn("h-8 w-8 transition-colors", showRules ? "text-primary bg-accent/10" : "text-muted-foreground hover:text-foreground")}
-                   onClick={() => setShowRules(!showRules)}
+                   onClick={() => { setShowRules(!showRules); setShowHistory(false); }}
                  >
                    <Settings2 size={16} />
                  </Button>
                </TooltipTrigger>
                <TooltipContent>AI Rules & Settings</TooltipContent>
+             </Tooltip>
+
+             {/* History Toggle */}
+             <Tooltip>
+               <TooltipTrigger asChild>
+                 <Button 
+                   variant="ghost" 
+                   size="icon" 
+                   className={cn("h-8 w-8 transition-colors", showHistory ? "text-primary bg-accent/10" : "text-muted-foreground hover:text-foreground")}
+                   onClick={() => { setShowHistory(!showHistory); setShowRules(false); }}
+                 >
+                   <History size={16} />
+                 </Button>
+               </TooltipTrigger>
+               <TooltipContent>Version History</TooltipContent>
              </Tooltip>
 
              {/* Status Indicator / AI Spinner */}
@@ -243,12 +274,55 @@ const SectionBlock = ({
                      )}
                   </div>
                 </div>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
 
-                {/* History / Revert */}
-                <div className="flex justify-end pt-1">
-                   <Button variant="ghost" size="sm" className="h-6 text-[10px] text-muted-foreground hover:text-destructive gap-1">
-                     <History size={10} /> Revert to previous
-                   </Button>
+        {/* History Panel */}
+        <AnimatePresence>
+          {showHistory && (
+            <motion.div
+              initial={{ height: 0, opacity: 0 }}
+              animate={{ height: 'auto', opacity: 1 }}
+              exit={{ height: 0, opacity: 0 }}
+              className="px-4 pb-4 overflow-hidden"
+            >
+              <div className="bg-muted/30 rounded-lg p-3 border border-border space-y-3">
+                <div className="flex items-center justify-between">
+                  <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                    Version History
+                  </div>
+                  <div className="text-[10px] text-muted-foreground">
+                    {history.length} versions
+                  </div>
+                </div>
+
+                <div className="space-y-2 max-h-[200px] overflow-y-auto pr-1">
+                  {history.length === 0 ? (
+                    <div className="text-xs text-muted-foreground italic py-2 text-center">
+                      No previous versions yet.
+                    </div>
+                  ) : (
+                    history.map((item, idx) => (
+                      <div key={idx} className="bg-background rounded-md border p-2 text-xs flex flex-col gap-2 group hover:border-primary/50 transition-colors">
+                        <div className="flex justify-between items-center text-[10px] text-muted-foreground">
+                          <span>{new Date(item.timestamp).toLocaleTimeString()} · {new Date(item.timestamp).toLocaleDateString()}</span>
+                          <Button 
+                            size="sm" 
+                            variant="ghost" 
+                            className="h-5 px-2 text-[10px] hover:bg-primary hover:text-primary-foreground opacity-0 group-hover:opacity-100 transition-opacity"
+                            onClick={() => restoreVersion(item)}
+                          >
+                            Apply this version
+                          </Button>
+                        </div>
+                        <div className="line-clamp-2 text-muted-foreground/80 font-serif">
+                          {item.content}
+                        </div>
+                      </div>
+                    ))
+                  )}
                 </div>
               </div>
             </motion.div>
