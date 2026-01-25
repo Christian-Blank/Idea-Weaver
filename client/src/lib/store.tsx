@@ -4,6 +4,20 @@ import React, { createContext, useContext, useState, useEffect } from 'react';
 
 export type SectionType = 'text' | 'list' | 'prompt' | 'code';
 
+export interface Rule {
+  id: string;
+  name: string;
+  instruction: string;
+  category: 'Style' | 'Format' | 'Tone' | 'Safety' | 'Custom';
+}
+
+export interface RuleGroup {
+  id: string;
+  name: string;
+  description?: string;
+  ruleIds: string[];
+}
+
 export interface Section {
   id: string;
   type: SectionType;
@@ -12,7 +26,9 @@ export interface Section {
   status: 'draft' | 'generating' | 'review' | 'completed';
   aiSuggestions?: string[];
   dependencies?: string[]; // IDs of other sections or docs this depends on
-  rules?: string; // Instructions for AI on how to process changes
+  rules?: string; // Custom instructions
+  ruleIds?: string[]; // Active library rules
+  groupIds?: string[]; // Active library rule groups
   executionMode?: 'manual' | 'auto' | 'disabled';
   history?: { content: string; timestamp: Date; }[];
 }
@@ -32,6 +48,8 @@ export interface DocumentType {
   color: string;
   description: string;
   defaultRules: string;
+  defaultRuleIds?: string[];
+  defaultGroupIds?: string[];
   icon: string;
 }
 
@@ -41,6 +59,8 @@ export interface DocumentTemplate {
   description: string;
   typeId: string;
   rules: string;
+  ruleIds?: string[];
+  groupIds?: string[];
   initialSections: Omit<Section, 'id' | 'status'>[];
 }
 
@@ -53,6 +73,8 @@ export interface Document {
   sections: Section[];
   history?: DocumentHistoryItem[];
   rules?: string; // Document-wide rules
+  ruleIds?: string[];
+  groupIds?: string[];
   createdAt: Date;
   updatedAt: Date;
 }
@@ -61,6 +83,8 @@ interface DocumentContextType {
   documents: Document[];
   documentTypes: DocumentType[];
   templates: DocumentTemplate[];
+  rules: Rule[];
+  ruleGroups: RuleGroup[];
   currentDocId: string | null;
   setCurrentDocId: (id: string | null) => void;
   createDocument: (type: string, parentId?: string, templateId?: string) => string;
@@ -74,16 +98,37 @@ interface DocumentContextType {
   setProjectRules: (rules: string) => void;
   addDocumentType: (dt: DocumentType) => void;
   updateDocumentType: (id: string, updates: Partial<DocumentType>) => void;
+  deleteDocumentType: (id: string) => void;
   addTemplate: (t: DocumentTemplate) => void;
   updateTemplate: (id: string, updates: Partial<DocumentTemplate>) => void;
   deleteTemplate: (id: string) => void;
   duplicateTemplate: (id: string) => void;
   deleteDocument: (id: string) => void;
   duplicateDocument: (id: string) => void;
-  deleteDocumentType: (id: string) => void;
+  addRule: (r: Rule) => void;
+  updateRule: (id: string, updates: Partial<Rule>) => void;
+  deleteRule: (id: string) => void;
+  addRuleGroup: (rg: RuleGroup) => void;
+  updateRuleGroup: (id: string, updates: Partial<RuleGroup>) => void;
+  deleteRuleGroup: (id: string) => void;
+  resolveRules: (custom?: string, ruleIds?: string[], groupIds?: string[]) => string;
 }
 
 // --- Mock Data ---
+
+const INITIAL_RULES: Rule[] = [
+  { id: 'r-concise', name: 'Concise', category: 'Style', instruction: 'Be concise and direct. Avoid fluff and filler words.' },
+  { id: 'r-active', name: 'Active Voice', category: 'Style', instruction: 'Use active voice. Subject performs the action.' },
+  { id: 'r-no-jargon', name: 'No Jargon', category: 'Tone', instruction: 'Use plain language. Explain technical terms if necessary.' },
+  { id: 'r-technical', name: 'Technical Depth', category: 'Tone', instruction: 'Use precise technical terminology. Assume a knowledgeable audience.' },
+  { id: 'r-bullets', name: 'Bullet Points', category: 'Format', instruction: 'Use bullet points for lists and steps.' },
+  { id: 'r-markdown', name: 'Markdown', category: 'Format', instruction: 'Use proper Markdown formatting for headers, links, and code blocks.' },
+];
+
+const INITIAL_RULE_GROUPS: RuleGroup[] = [
+  { id: 'rg-professional', name: 'Professional Standard', description: 'Clean, direct business communication', ruleIds: ['r-concise', 'r-active', 'r-no-jargon'] },
+  { id: 'rg-engineering', name: 'Engineering Spec', description: 'Detailed technical writing', ruleIds: ['r-technical', 'r-markdown', 'r-active'] },
+];
 
 const INITIAL_PROJECT_RULES = `Always maintain a professional but creative tone.
 Prioritize user experience and accessibility.
@@ -419,8 +464,48 @@ export function DocumentProvider({ children }: { children: React.ReactNode }) {
   const [documents, setDocuments] = useState<Document[]>(INITIAL_DOCS);
   const [documentTypes, setDocumentTypes] = useState<DocumentType[]>(INITIAL_TYPES);
   const [templates, setTemplates] = useState<DocumentTemplate[]>(INITIAL_TEMPLATES);
+  const [rules, setRules] = useState<Rule[]>(INITIAL_RULES);
+  const [ruleGroups, setRuleGroups] = useState<RuleGroup[]>(INITIAL_RULE_GROUPS);
   const [currentDocId, setCurrentDocId] = useState<string | null>(null);
   const [projectRules, setProjectRules] = useState<string>(INITIAL_PROJECT_RULES);
+
+  const resolveRules = (custom?: string, ruleIds?: string[], groupIds?: string[]) => {
+      let resolved = '';
+      
+      // Add active groups
+      if (groupIds) {
+          groupIds.forEach(gid => {
+              const group = ruleGroups.find(g => g.id === gid);
+              if (group) {
+                  group.ruleIds.forEach(rid => {
+                      const rule = rules.find(r => r.id === rid);
+                      if (rule) resolved += `${rule.instruction}\n`;
+                  });
+              }
+          });
+      }
+
+      // Add active individual rules
+      if (ruleIds) {
+          ruleIds.forEach(rid => {
+              const rule = rules.find(r => r.id === rid);
+              if (rule) resolved += `${rule.instruction}\n`;
+          });
+      }
+
+      // Add custom rules override
+      if (custom) resolved += `${custom}\n`;
+      
+      return resolved.trim();
+  };
+  
+  const addRule = (r: Rule) => setRules(prev => [...prev, r]);
+  const updateRule = (id: string, updates: Partial<Rule>) => setRules(prev => prev.map(r => r.id === id ? { ...r, ...updates } : r));
+  const deleteRule = (id: string) => setRules(prev => prev.filter(r => r.id !== id));
+  
+  const addRuleGroup = (rg: RuleGroup) => setRuleGroups(prev => [...prev, rg]);
+  const updateRuleGroup = (id: string, updates: Partial<RuleGroup>) => setRuleGroups(prev => prev.map(g => g.id === id ? { ...g, ...updates } : g));
+  const deleteRuleGroup = (id: string) => setRuleGroups(prev => prev.filter(g => g.id !== id));
 
   const createDocument = (type: string, parentId?: string, templateId?: string) => {
     let initialSections: Section[] = [
@@ -638,7 +723,16 @@ export function DocumentProvider({ children }: { children: React.ReactNode }) {
       duplicateTemplate,
       deleteDocument,
       duplicateDocument,
-      deleteDocumentType
+      deleteDocumentType,
+      rules,
+      ruleGroups,
+      addRule,
+      updateRule,
+      deleteRule,
+      addRuleGroup,
+      updateRuleGroup,
+      deleteRuleGroup,
+      resolveRules
     }}>
       {children}
     </DocumentContext.Provider>

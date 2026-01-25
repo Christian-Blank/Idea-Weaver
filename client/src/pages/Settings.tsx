@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useLocation } from "wouter";
-import { useDocuments, DocumentType, DocumentTemplate } from '../lib/store';
+import { useDocuments, DocumentType, DocumentTemplate, Rule, RuleGroup } from '../lib/store';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { Textarea } from '../components/ui/textarea';
@@ -16,7 +16,11 @@ import {
   Lightbulb, 
   Palette,
   LayoutTemplate,
-  Copy
+  Copy,
+  Library,
+  Check,
+  X,
+  Tag
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -33,12 +37,22 @@ export default function Settings() {
     addTemplate,
     updateTemplate,
     deleteTemplate,
-    duplicateTemplate
+    duplicateTemplate,
+    rules,
+    ruleGroups,
+    addRule,
+    updateRule,
+    deleteRule,
+    addRuleGroup,
+    updateRuleGroup,
+    deleteRuleGroup
   } = useDocuments();
 
-  const [activeTab, setActiveTab] = useState<'general' | 'types' | 'templates'>('general');
+  const [activeTab, setActiveTab] = useState<'general' | 'types' | 'templates' | 'library'>('general');
   const [editingTypeId, setEditingTypeId] = useState<string | null>(null);
   const [editingTemplateId, setEditingTemplateId] = useState<string | null>(null);
+  const [editingRuleId, setEditingRuleId] = useState<string | null>(null);
+  const [editingGroupId, setEditingGroupId] = useState<string | null>(null);
 
   // Form states
   const [newTypeName, setNewTypeName] = useState('');
@@ -50,6 +64,10 @@ export default function Settings() {
   const [newTemplateDesc, setNewTemplateDesc] = useState('');
   const [newTemplateTypeId, setNewTemplateTypeId] = useState('');
   const [newTemplateRules, setNewTemplateRules] = useState('');
+
+  // Rules Form State
+  const [ruleForm, setRuleForm] = useState<Partial<Rule>>({ category: 'Style' });
+  const [groupForm, setGroupForm] = useState<Partial<RuleGroup>>({ ruleIds: [] });
 
   const handleAddType = () => {
     if (!newTypeName || !newTypeCode) return;
@@ -87,9 +105,52 @@ export default function Settings() {
     setEditingTemplateId(null);
   };
 
+  const handleSaveRule = () => {
+    if (!ruleForm.name || !ruleForm.instruction) return;
+    
+    if (editingRuleId === 'new') {
+        addRule({
+            id: `r-${Date.now()}`,
+            name: ruleForm.name,
+            instruction: ruleForm.instruction,
+            category: ruleForm.category as any || 'Custom'
+        });
+    } else if (editingRuleId) {
+        updateRule(editingRuleId, ruleForm);
+    }
+    setEditingRuleId(null);
+    setRuleForm({ category: 'Style' });
+  };
+
+  const handleSaveGroup = () => {
+    if (!groupForm.name) return;
+
+    if (editingGroupId === 'new') {
+        addRuleGroup({
+            id: `rg-${Date.now()}`,
+            name: groupForm.name,
+            description: groupForm.description,
+            ruleIds: groupForm.ruleIds || []
+        });
+    } else if (editingGroupId) {
+        updateRuleGroup(editingGroupId, groupForm);
+    }
+    setEditingGroupId(null);
+    setGroupForm({ ruleIds: [] });
+  };
+
+  const toggleRuleInGroup = (ruleId: string) => {
+    const currentIds = groupForm.ruleIds || [];
+    if (currentIds.includes(ruleId)) {
+        setGroupForm({ ...groupForm, ruleIds: currentIds.filter(id => id !== ruleId) });
+    } else {
+        setGroupForm({ ...groupForm, ruleIds: [...currentIds, ruleId] });
+    }
+  };
+
   return (
     <div className="min-h-screen bg-[#F9F9F7] text-slate-900 font-sans selection:bg-blue-100/50">
-      <div className="max-w-4xl mx-auto p-6 md:p-12">
+      <div className="max-w-6xl mx-auto p-6 md:p-12">
         {/* Header */}
         <header className="mb-12 flex items-center justify-between">
           <div className="flex items-center gap-4">
@@ -125,6 +186,17 @@ export default function Settings() {
             >
               <Globe size={18} />
               Global Rules
+            </button>
+            <button
+              onClick={() => setActiveTab('library')}
+              className={`w-full text-left px-4 py-3 rounded-lg flex items-center gap-3 transition-colors ${
+                activeTab === 'library' 
+                  ? 'bg-white shadow-sm ring-1 ring-slate-200 font-medium text-blue-600' 
+                  : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
+              }`}
+            >
+              <Library size={18} />
+              Rules Library
             </button>
             <button
               onClick={() => setActiveTab('types')}
@@ -177,6 +249,215 @@ export default function Settings() {
                     />
                   </div>
                 </motion.div>
+              )}
+
+              {activeTab === 'library' && (
+                  <motion.div 
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -10 }}
+                    className="space-y-8"
+                  >
+                    {/* Rule Groups Section */}
+                    <div className="space-y-4">
+                        <div className="flex justify-between items-center">
+                            <div>
+                                <h2 className="text-lg font-semibold flex items-center gap-2">
+                                    <Library size={18} className="text-indigo-500" />
+                                    Rule Themes (Groups)
+                                </h2>
+                                <p className="text-sm text-slate-500">Combine rules into reusable themes for different contexts</p>
+                            </div>
+                            <Button onClick={() => { setEditingGroupId('new'); setGroupForm({ ruleIds: [] }); }} size="sm" className="gap-2">
+                                <Plus size={16} /> New Theme
+                            </Button>
+                        </div>
+
+                        {editingGroupId && (
+                            <div className="bg-indigo-50/50 border border-indigo-200 rounded-xl p-6 animate-in fade-in slide-in-from-top-4">
+                                <h3 className="font-medium mb-4 text-indigo-900">
+                                    {editingGroupId === 'new' ? 'New Theme' : 'Edit Theme'}
+                                </h3>
+                                <div className="space-y-4">
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                        <div>
+                                            <label className="text-xs font-semibold uppercase text-slate-500 mb-1 block">Theme Name</label>
+                                            <Input 
+                                                value={groupForm.name || ''} 
+                                                onChange={e => setGroupForm({...groupForm, name: e.target.value})}
+                                                placeholder="e.g. Engineering Standard"
+                                                className="bg-white"
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className="text-xs font-semibold uppercase text-slate-500 mb-1 block">Description</label>
+                                            <Input 
+                                                value={groupForm.description || ''} 
+                                                onChange={e => setGroupForm({...groupForm, description: e.target.value})}
+                                                placeholder="Brief description..."
+                                                className="bg-white"
+                                            />
+                                        </div>
+                                    </div>
+                                    
+                                    <div>
+                                        <label className="text-xs font-semibold uppercase text-slate-500 mb-2 block">Included Rules</label>
+                                        <div className="bg-white rounded-lg border border-slate-200 p-3 max-h-[200px] overflow-y-auto grid grid-cols-1 sm:grid-cols-2 gap-2">
+                                            {rules.map(rule => (
+                                                <div 
+                                                    key={rule.id} 
+                                                    onClick={() => toggleRuleInGroup(rule.id)}
+                                                    className={`cursor-pointer p-2 rounded border flex items-center justify-between transition-all ${
+                                                        groupForm.ruleIds?.includes(rule.id)
+                                                            ? 'bg-indigo-50 border-indigo-200 text-indigo-700'
+                                                            : 'hover:bg-slate-50 border-slate-100 text-slate-600'
+                                                    }`}
+                                                >
+                                                    <div className="flex items-center gap-2">
+                                                        <Tag size={12} />
+                                                        <span className="text-sm font-medium">{rule.name}</span>
+                                                    </div>
+                                                    {groupForm.ruleIds?.includes(rule.id) && <Check size={14} />}
+                                                </div>
+                                            ))}
+                                            {rules.length === 0 && <div className="text-sm text-slate-400 p-2">No rules created yet.</div>}
+                                        </div>
+                                    </div>
+
+                                    <div className="flex justify-end gap-2 pt-2">
+                                        <Button variant="ghost" onClick={() => setEditingGroupId(null)}>Cancel</Button>
+                                        <Button onClick={handleSaveGroup}>Save Theme</Button>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            {ruleGroups.map(group => (
+                                <div key={group.id} className="group bg-white rounded-xl border border-slate-200 p-4 hover:border-indigo-300 transition-colors shadow-sm relative">
+                                    <div className="absolute top-4 right-4 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                        <Button variant="ghost" size="icon" className="h-6 w-6 text-slate-400 hover:text-indigo-600"
+                                            onClick={() => { setEditingGroupId(group.id); setGroupForm(group); }}
+                                        >
+                                            <Settings2 size={14} />
+                                        </Button>
+                                        <Button variant="ghost" size="icon" className="h-6 w-6 text-slate-400 hover:text-red-600"
+                                            onClick={() => confirm('Delete this theme?') && deleteRuleGroup(group.id)}
+                                        >
+                                            <Trash2 size={14} />
+                                        </Button>
+                                    </div>
+                                    <h3 className="font-semibold text-slate-900">{group.name}</h3>
+                                    <p className="text-xs text-slate-500 mb-3">{group.description || 'No description'}</p>
+                                    <div className="flex flex-wrap gap-1">
+                                        {group.ruleIds.map(rid => {
+                                            const r = rules.find(rule => rule.id === rid);
+                                            if (!r) return null;
+                                            return (
+                                                <span key={rid} className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-medium bg-slate-100 text-slate-600 border border-slate-200">
+                                                    {r.name}
+                                                </span>
+                                            );
+                                        })}
+                                        {group.ruleIds.length === 0 && <span className="text-[10px] text-slate-400 italic">No rules linked</span>}
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+
+                    <div className="h-px bg-slate-200" />
+
+                    {/* Individual Rules Section */}
+                    <div className="space-y-4">
+                        <div className="flex justify-between items-center">
+                            <div>
+                                <h2 className="text-lg font-semibold flex items-center gap-2">
+                                    <Tag size={18} className="text-slate-500" />
+                                    Individual Rules
+                                </h2>
+                                <p className="text-sm text-slate-500">Atomic instructions that can be used in themes or directly</p>
+                            </div>
+                            <Button onClick={() => { setEditingRuleId('new'); setRuleForm({ category: 'Style' }); }} size="sm" variant="outline" className="gap-2">
+                                <Plus size={16} /> New Rule
+                            </Button>
+                        </div>
+
+                        {editingRuleId && (
+                            <div className="bg-slate-50 border border-slate-200 rounded-xl p-6 animate-in fade-in slide-in-from-top-4">
+                                <h3 className="font-medium mb-4 text-slate-900">
+                                    {editingRuleId === 'new' ? 'New Rule' : 'Edit Rule'}
+                                </h3>
+                                <div className="space-y-4">
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <div>
+                                            <label className="text-xs font-semibold uppercase text-slate-500 mb-1 block">Rule Name</label>
+                                            <Input 
+                                                value={ruleForm.name || ''} 
+                                                onChange={e => setRuleForm({...ruleForm, name: e.target.value})}
+                                                placeholder="e.g. Active Voice"
+                                                className="bg-white"
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className="text-xs font-semibold uppercase text-slate-500 mb-1 block">Category</label>
+                                            <select 
+                                                value={ruleForm.category}
+                                                onChange={e => setRuleForm({...ruleForm, category: e.target.value as any})}
+                                                className="w-full h-10 rounded-md border border-input bg-white px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                                            >
+                                                <option value="Style">Style</option>
+                                                <option value="Format">Format</option>
+                                                <option value="Tone">Tone</option>
+                                                <option value="Safety">Safety</option>
+                                                <option value="Custom">Custom</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <label className="text-xs font-semibold uppercase text-slate-500 mb-1 block">Instruction Prompt</label>
+                                        <Textarea 
+                                            value={ruleForm.instruction || ''} 
+                                            onChange={e => setRuleForm({...ruleForm, instruction: e.target.value})}
+                                            placeholder="The actual instruction passed to the AI..."
+                                            className="bg-white min-h-[80px]"
+                                        />
+                                    </div>
+                                    <div className="flex justify-end gap-2 pt-2">
+                                        <Button variant="ghost" onClick={() => setEditingRuleId(null)}>Cancel</Button>
+                                        <Button onClick={handleSaveRule}>Save Rule</Button>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            {rules.map(rule => (
+                                <div key={rule.id} className="group bg-white rounded-lg border border-slate-200 p-3 hover:border-slate-300 transition-colors shadow-sm flex flex-col justify-between">
+                                    <div className="mb-2">
+                                        <div className="flex justify-between items-start mb-1">
+                                            <span className="inline-block px-1.5 py-0.5 rounded text-[9px] uppercase font-bold tracking-wider bg-slate-100 text-slate-500">
+                                                {rule.category}
+                                            </span>
+                                            <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                <button onClick={() => { setEditingRuleId(rule.id); setRuleForm(rule); }} className="text-slate-400 hover:text-blue-600">
+                                                    <Settings2 size={12} />
+                                                </button>
+                                                <button onClick={() => confirm('Delete rule?') && deleteRule(rule.id)} className="text-slate-400 hover:text-red-600">
+                                                    <X size={12} />
+                                                </button>
+                                            </div>
+                                        </div>
+                                        <h4 className="font-medium text-slate-900 text-sm">{rule.name}</h4>
+                                    </div>
+                                    <p className="text-xs text-slate-500 line-clamp-2 italic bg-slate-50 p-1.5 rounded border border-slate-100">
+                                        "{rule.instruction}"
+                                    </p>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                  </motion.div>
               )}
 
               {activeTab === 'types' && (

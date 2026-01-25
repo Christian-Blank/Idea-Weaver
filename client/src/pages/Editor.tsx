@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { useDocuments, Section } from '../lib/store';
+import { useDocuments, Section, Rule, RuleGroup } from '../lib/store';
 import { useRoute } from 'wouter';
 import { Layout } from '../components/Layout';
 import { Button } from '../components/ui/button';
@@ -28,7 +28,10 @@ import {
   Unlink,
   AlertTriangle,
   FileText,
-  Globe
+  Globe,
+  Library,
+  Tag,
+  Check
 } from 'lucide-react';
 import { 
   DropdownMenu, 
@@ -63,7 +66,7 @@ const SectionBlock = ({
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   
   // Get inherited rules
-  const { projectRules, getDocument, getObjectType } = useDocuments();
+  const { projectRules, getDocument, getObjectType, rules: libraryRules, ruleGroups, resolveRules } = useDocuments();
   const currentDoc = getDocument(docId);
   const docRules = currentDoc?.rules || '';
   const docType = currentDoc ? getObjectType(currentDoc.type) : undefined;
@@ -72,6 +75,8 @@ const SectionBlock = ({
   // Default values if not present
   const executionMode = section.executionMode || 'disabled';
   const rules = section.rules || '';
+  const ruleIds = section.ruleIds || [];
+  const groupIds = section.groupIds || [];
   const history = section.history || [];
   const dependencies = section.dependencies || [];
 
@@ -110,6 +115,22 @@ const SectionBlock = ({
     }
   };
 
+  const toggleRule = (ruleId: string) => {
+    if (ruleIds.includes(ruleId)) {
+        onUpdate(section.id, { ruleIds: ruleIds.filter(id => id !== ruleId) });
+    } else {
+        onUpdate(section.id, { ruleIds: [...ruleIds, ruleId] });
+    }
+  };
+
+  const toggleGroup = (groupId: string) => {
+    if (groupIds.includes(groupId)) {
+        onUpdate(section.id, { groupIds: groupIds.filter(id => id !== groupId) });
+    } else {
+        onUpdate(section.id, { groupIds: [...groupIds, groupId] });
+    }
+  };
+
   // Auto-resize textarea
   useEffect(() => {
     if (textareaRef.current) {
@@ -128,11 +149,13 @@ const SectionBlock = ({
         'Stylistic: Use more active voice in the second paragraph.'
       ];
       
+      const activeRules = resolveRules(rules, ruleIds, groupIds);
+
       const fullPrompt = `
         Project Rules: ${projectRules}
         Document Type Rules: ${typeRules}
         Document Rules: ${docRules}
-        Section Rules: ${rules}
+        Section Active Rules: ${activeRules}
         Content: ${section.content}
       `;
       
@@ -149,10 +172,15 @@ const SectionBlock = ({
         suggestions.push('Document Rule Check: Ensure vision statement is inspiring.');
       }
       
-      if (rules.toLowerCase().includes('concise')) {
+      // Check against active library rules
+      if (activeRules.toLowerCase().includes('concise')) {
         suggestions.push('Rule Check: Text could be 20% shorter to meet "Concise" rule.');
       }
       
+      if (activeRules.toLowerCase().includes('no jargon')) {
+        suggestions.push('Rule Check: Some terms may be too technical for general audience.');
+      }
+
       onUpdate(section.id, { 
         status: 'review',
         aiSuggestions: suggestions
@@ -324,9 +352,54 @@ const SectionBlock = ({
                   </div>
                 )}
 
+                {/* Library Rules Selection */}
+                <div className="space-y-2 pb-2 border-b border-border/50">
+                    <div className="text-[10px] uppercase font-bold text-muted-foreground/70 tracking-widest flex items-center gap-1">
+                      <Library size={10} /> Library Rules
+                    </div>
+                    
+                    {/* Groups */}
+                    <div className="flex flex-wrap gap-2 mb-2">
+                        {ruleGroups.map(group => (
+                            <button
+                                key={group.id}
+                                onClick={() => toggleGroup(group.id)}
+                                className={cn(
+                                    "text-[10px] px-2 py-1 rounded border transition-colors flex items-center gap-1",
+                                    groupIds.includes(group.id) 
+                                        ? "bg-indigo-100 text-indigo-700 border-indigo-200" 
+                                        : "bg-background text-muted-foreground border-border hover:bg-muted"
+                                )}
+                            >
+                                <Library size={10} />
+                                {group.name}
+                            </button>
+                        ))}
+                    </div>
+
+                    {/* Individual Rules */}
+                    <div className="flex flex-wrap gap-2">
+                        {libraryRules.map(rule => (
+                            <button
+                                key={rule.id}
+                                onClick={() => toggleRule(rule.id)}
+                                className={cn(
+                                    "text-[10px] px-2 py-1 rounded border transition-colors flex items-center gap-1",
+                                    ruleIds.includes(rule.id) 
+                                        ? "bg-slate-100 text-slate-800 border-slate-300 font-medium" 
+                                        : "bg-background text-muted-foreground border-border hover:bg-muted"
+                                )}
+                            >
+                                <Tag size={10} />
+                                {rule.name}
+                            </button>
+                        ))}
+                    </div>
+                </div>
+
                 <div className="flex items-center justify-between">
                   <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-                    Section Instructions
+                    Custom Instructions
                   </div>
                   
                   {/* Execution Mode Selector */}
