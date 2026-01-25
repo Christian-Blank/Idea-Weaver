@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useLocation } from "wouter";
 import { 
   Plus, 
@@ -13,7 +13,9 @@ import {
   Settings,
   LayoutTemplate,
   Trash2,
-  Copy
+  Copy,
+  LayoutGrid,
+  List
 } from 'lucide-react';
 import { Button } from '../components/ui/button';
 import { useDocuments, DocumentTemplate } from '../lib/store';
@@ -25,9 +27,11 @@ import {
   DropdownMenuTrigger,
   DropdownMenuSeparator
 } from '../components/ui/dropdown-menu';
+import FlowDashboard from '../components/FlowDashboard';
 
 export default function Dashboard() {
   const [location, setLocation] = useLocation();
+  const [viewMode, setViewMode] = useState<'flow' | 'list'>('flow');
   const { 
     documents, 
     createDocument, 
@@ -136,81 +140,104 @@ export default function Dashboard() {
         <section>
           <div className="flex items-center justify-between mb-6">
             <h2 className="text-xs font-bold text-slate-400 uppercase tracking-widest">
-              Recent Documents
+              Project Universe
             </h2>
-            <Button variant="ghost" size="sm" className="text-slate-500 hover:text-slate-900">
-              <Filter size={16} className="mr-2" /> Filter
-            </Button>
-          </div>
-
-          <div className="space-y-3">
-            {documents.map((doc) => {
-              const type = documentTypes.find(dt => dt.code === doc.type);
-              
-              return (
-                <div 
-                  key={doc.id}
-                  onClick={() => setLocation(`/editor/${doc.id}`)}
-                  className="group flex items-center p-4 bg-white rounded-xl border border-slate-200 shadow-sm hover:shadow-md hover:border-blue-200 transition-all cursor-pointer"
+            <div className="flex gap-2">
+                <Button 
+                    variant={viewMode === 'flow' ? 'secondary' : 'ghost'} 
+                    size="sm" 
+                    onClick={() => setViewMode('flow')}
+                    className="gap-2"
                 >
-                  <div className={`w-10 h-10 rounded-lg flex items-center justify-center mr-4 ${type?.color || 'bg-slate-100 text-slate-500'}`}>
-                    {type?.icon === 'Lightbulb' && <Lightbulb size={20} />}
-                    {type?.icon === 'FileText' && <FileText size={20} />}
-                    {type?.icon === 'GitBranch' && <GitBranch size={20} />}
-                    {!type && <FileText size={20} />}
-                  </div>
-                  
-                  <div className="flex-1 min-w-0">
-                    <h3 className="font-semibold text-slate-900 truncate group-hover:text-blue-600 transition-colors">
-                      {doc.title}
-                    </h3>
-                    <div className="flex items-center text-xs text-slate-500 mt-1">
-                      <span className="flex items-center font-medium">
-                        {type?.name || doc.type}
-                      </span>
-                      <span className="mx-2 text-slate-300">•</span>
-                      <span className="flex items-center">
-                        <Clock size={12} className="mr-1" />
-                        Edited {formatDistanceToNow(doc.updatedAt)} ago
-                      </span>
-                    </div>
-                  </div>
-
-                  <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                    <div className="flex -space-x-2 mr-4">
-                      <div className="w-6 h-6 rounded-full bg-blue-100 border-2 border-white flex items-center justify-center text-[10px] font-bold text-blue-700">AI</div>
-                      <div className="w-6 h-6 rounded-full bg-slate-200 border-2 border-white flex items-center justify-center text-[10px] font-bold text-slate-600">You</div>
-                    </div>
-                    
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button 
-                          variant="ghost" 
-                          size="icon" 
-                          className="text-slate-400 hover:text-slate-900"
-                          onClick={(e) => e.stopPropagation()}
-                        >
-                          <MoreVertical size={16} />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuItem onClick={(e) => handleDuplicateDoc(e, doc.id)}>
-                          <Copy size={14} className="mr-2" /> Duplicate
-                        </DropdownMenuItem>
-                        <DropdownMenuSeparator />
-                        <DropdownMenuItem 
-                          className="text-red-600 focus:text-red-600"
-                          onClick={(e) => handleDeleteDoc(e, doc.id)}
-                        >
-                          <Trash2 size={14} className="mr-2" /> Delete
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </div>
-                </div>
-              );
-            })}
+                    <GitBranch size={16} /> Flow View
+                </Button>
+                <Button 
+                    variant={viewMode === 'list' ? 'secondary' : 'ghost'} 
+                    size="sm" 
+                    onClick={() => setViewMode('list')}
+                    className="gap-2"
+                >
+                    <List size={16} /> List View
+                </Button>
+                <div className="w-px h-6 bg-slate-200 mx-2" />
+                <Button variant="ghost" size="sm" className="text-slate-500 hover:text-slate-900">
+                    <Filter size={16} className="mr-2" /> Filter
+                </Button>
+            </div>
           </div>
+
+          {viewMode === 'flow' ? (
+              <FlowDashboard />
+          ) : (
+              <div className="space-y-3">
+                {documents.map((doc) => {
+                  const type = documentTypes.find(dt => dt.code === doc.type);
+                  
+                  return (
+                    <div 
+                      key={doc.id}
+                      onClick={() => setLocation(`/editor/${doc.id}`)}
+                      className="group flex items-center p-4 bg-white rounded-xl border border-slate-200 shadow-sm hover:shadow-md hover:border-blue-200 transition-all cursor-pointer"
+                    >
+                      <div className={`w-10 h-10 rounded-lg flex items-center justify-center mr-4 ${type?.color || 'bg-slate-100 text-slate-500'}`}>
+                        {type?.icon === 'Lightbulb' && <Lightbulb size={20} />}
+                        {type?.icon === 'FileText' && <FileText size={20} />}
+                        {type?.icon === 'GitBranch' && <GitBranch size={20} />}
+                        {!type && <FileText size={20} />}
+                      </div>
+                      
+                      <div className="flex-1 min-w-0">
+                        <h3 className="font-semibold text-slate-900 truncate group-hover:text-blue-600 transition-colors">
+                          {doc.title}
+                        </h3>
+                        <div className="flex items-center text-xs text-slate-500 mt-1">
+                          <span className="flex items-center font-medium">
+                            {type?.name || doc.type}
+                          </span>
+                          <span className="mx-2 text-slate-300">•</span>
+                          <span className="flex items-center">
+                            <Clock size={12} className="mr-1" />
+                            Edited {formatDistanceToNow(doc.updatedAt)} ago
+                          </span>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <div className="flex -space-x-2 mr-4">
+                          <div className="w-6 h-6 rounded-full bg-blue-100 border-2 border-white flex items-center justify-center text-[10px] font-bold text-blue-700">AI</div>
+                          <div className="w-6 h-6 rounded-full bg-slate-200 border-2 border-white flex items-center justify-center text-[10px] font-bold text-slate-600">You</div>
+                        </div>
+                        
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button 
+                              variant="ghost" 
+                              size="icon" 
+                              className="text-slate-400 hover:text-slate-900"
+                              onClick={(e) => e.stopPropagation()}
+                            >
+                              <MoreVertical size={16} />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem onClick={(e) => handleDuplicateDoc(e, doc.id)}>
+                              <Copy size={14} className="mr-2" /> Duplicate
+                            </DropdownMenuItem>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem 
+                              className="text-red-600 focus:text-red-600"
+                              onClick={(e) => handleDeleteDoc(e, doc.id)}
+                            >
+                              <Trash2 size={14} className="mr-2" /> Delete
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+          )}
         </section>
       </div>
     </div>
