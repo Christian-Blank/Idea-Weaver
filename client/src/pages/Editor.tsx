@@ -48,6 +48,7 @@ const SectionBlock = ({
   const [isEditing, setIsEditing] = useState(false);
   const [showRules, setShowRules] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
+  const [previewContent, setPreviewContent] = useState<string | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   
   // Default values if not present
@@ -61,7 +62,7 @@ const SectionBlock = ({
       textareaRef.current.style.height = 'auto';
       textareaRef.current.style.height = textareaRef.current.scrollHeight + 'px';
     }
-  }, [section.content, isEditing]);
+  }, [section.content, previewContent, isEditing]);
 
   const simulateAI = () => {
     onUpdate(section.id, { status: 'generating' });
@@ -88,7 +89,13 @@ const SectionBlock = ({
     onUpdate(section.id, { executionMode: mode });
   };
 
-  const restoreVersion = (version: { content: string, timestamp: Date }) => {
+  const handlePreview = (version: { content: string, timestamp: Date }) => {
+    setPreviewContent(version.content);
+  };
+
+  const applyRestoration = () => {
+    if (!previewContent) return;
+
     // Push current state to history before restoring
     const newHistory = [
       { content: section.content, timestamp: new Date() },
@@ -96,10 +103,15 @@ const SectionBlock = ({
     ];
     
     onUpdate(section.id, { 
-      content: version.content,
+      content: previewContent,
       history: newHistory
     });
+    setPreviewContent(null);
     setShowHistory(false);
+  };
+
+  const cancelPreview = () => {
+    setPreviewContent(null);
   };
 
   return (
@@ -150,7 +162,7 @@ const SectionBlock = ({
                    variant="ghost" 
                    size="icon" 
                    className={cn("h-8 w-8 transition-colors", showHistory ? "text-primary bg-accent/10" : "text-muted-foreground hover:text-foreground")}
-                   onClick={() => { setShowHistory(!showHistory); setShowRules(false); }}
+                   onClick={() => { setShowHistory(!showHistory); setShowRules(false); setPreviewContent(null); }}
                  >
                    <History size={16} />
                  </Button>
@@ -311,10 +323,15 @@ const SectionBlock = ({
                           <Button 
                             size="sm" 
                             variant="ghost" 
-                            className="h-5 px-2 text-[10px] hover:bg-primary hover:text-primary-foreground opacity-0 group-hover:opacity-100 transition-opacity"
-                            onClick={() => restoreVersion(item)}
+                            className={cn(
+                              "h-5 px-2 text-[10px] transition-all",
+                              previewContent === item.content 
+                                ? "bg-primary/20 text-primary hover:bg-primary/30 opacity-100" 
+                                : "hover:bg-primary hover:text-primary-foreground opacity-0 group-hover:opacity-100"
+                            )}
+                            onClick={() => handlePreview(item)}
                           >
-                            Apply this version
+                            {previewContent === item.content ? 'Previewing' : 'Preview'}
                           </Button>
                         </div>
                         <div className="line-clamp-2 text-muted-foreground/80 font-serif">
@@ -333,17 +350,44 @@ const SectionBlock = ({
         <div className="px-4 pb-4">
           <Textarea
             ref={textareaRef}
-            value={section.content}
-            onChange={(e) => onUpdate(section.id, { content: e.target.value })}
+            value={previewContent !== null ? previewContent : section.content}
+            onChange={(e) => !previewContent && onUpdate(section.id, { content: e.target.value })}
             onFocus={() => setIsEditing(true)}
             onBlur={() => setIsEditing(false)}
+            readOnly={previewContent !== null}
             className={cn(
-              "min-h-[100px] resize-none border-0 focus-visible:ring-0 p-0 text-base leading-relaxed bg-transparent",
-              !isEditing && "text-muted-foreground"
+              "min-h-[100px] resize-none border-0 focus-visible:ring-0 p-0 text-base leading-relaxed bg-transparent transition-opacity",
+              !isEditing && "text-muted-foreground",
+              previewContent !== null && "opacity-70"
             )}
             placeholder="Write something amazing..."
           />
         </div>
+
+        {/* Preview Banner */}
+        <AnimatePresence>
+          {previewContent !== null && (
+            <motion.div
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: 10 }}
+              className="absolute bottom-4 left-4 right-4 bg-primary text-primary-foreground p-3 rounded-lg shadow-lg z-20 flex items-center justify-between"
+            >
+              <div className="flex items-center gap-2 text-sm font-medium">
+                <History size={16} />
+                <span>Previewing historical version</span>
+              </div>
+              <div className="flex gap-2">
+                <Button size="sm" variant="secondary" onClick={cancelPreview} className="h-7 text-xs">
+                  Cancel
+                </Button>
+                <Button size="sm" variant="default" onClick={applyRestoration} className="h-7 text-xs border border-primary-foreground/20 hover:bg-primary-foreground/10">
+                  Apply Restore
+                </Button>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
 
         {/* AI Suggestions Footer */}
         <AnimatePresence>
