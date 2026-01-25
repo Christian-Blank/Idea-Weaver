@@ -365,20 +365,18 @@ const SectionBlock = ({
                          dependencies.map(depId => {
                            const depSection = allSections.find(s => s.id === depId);
                            return (
-                             <div 
+                             <button
                                key={depId}
-                               className="group flex items-center gap-1.5 pl-2 pr-1 py-1 rounded-md bg-blue-50/80 border border-blue-200 text-blue-700 shadow-sm transition-all hover:bg-blue-100/80"
+                               onClick={() => toggleDependency(depId)}
+                               className="group flex items-center gap-1.5 pl-2 pr-1 py-1 rounded-md bg-blue-50/80 border border-blue-200 text-blue-700 shadow-sm transition-all hover:bg-red-50 hover:border-red-200 hover:text-red-700 hover:shadow-md"
                              >
                                <span className="text-[10px] font-medium max-w-[120px] truncate">
                                  {depSection?.title || 'Unknown Section'}
                                </span>
-                               <button
-                                 onClick={() => toggleDependency(depId)}
-                                 className="h-4 w-4 rounded-full flex items-center justify-center hover:bg-blue-200/50 text-blue-600/70 hover:text-blue-700 transition-colors"
-                               >
+                               <div className="h-4 w-4 rounded-full flex items-center justify-center bg-blue-100/50 group-hover:bg-red-100 group-hover:text-red-600 transition-colors">
                                  <PanelRightClose size={10} className="rotate-45" /> {/* Using as X icon */}
-                               </button>
-                             </div>
+                               </div>
+                             </button>
                            );
                          })
                        ) : (
