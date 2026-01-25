@@ -357,28 +357,57 @@ const SectionBlock = ({
                     </motion.div>
                   )}
 
-                  <div className="flex flex-wrap gap-2">
-                    {allSections.filter(s => s.id !== section.id).map(otherSection => {
-                      const isLinked = dependencies.includes(otherSection.id);
-                      return (
+                  {/* Active Dependencies */}
+                  <div className="mb-3 space-y-2">
+                     <span className="text-[10px] text-muted-foreground font-medium block">Linked Sections (Upstream)</span>
+                     <div className="flex flex-wrap gap-2">
+                       {dependencies.length > 0 ? (
+                         dependencies.map(depId => {
+                           const depSection = allSections.find(s => s.id === depId);
+                           return (
+                             <div 
+                               key={depId}
+                               className="group flex items-center gap-1.5 pl-2 pr-1 py-1 rounded-md bg-blue-50/80 border border-blue-200 text-blue-700 shadow-sm transition-all hover:bg-blue-100/80"
+                             >
+                               <span className="text-[10px] font-medium max-w-[120px] truncate">
+                                 {depSection?.title || 'Unknown Section'}
+                               </span>
+                               <button
+                                 onClick={() => toggleDependency(depId)}
+                                 className="h-4 w-4 rounded-full flex items-center justify-center hover:bg-blue-200/50 text-blue-600/70 hover:text-blue-700 transition-colors"
+                               >
+                                 <PanelRightClose size={10} className="rotate-45" /> {/* Using as X icon */}
+                               </button>
+                             </div>
+                           );
+                         })
+                       ) : (
+                         <span className="text-[10px] text-muted-foreground italic px-1">No upstream dependencies linked.</span>
+                       )}
+                     </div>
+                  </div>
+
+                  {/* Available Dependencies */}
+                  <div>
+                    <span className="text-[10px] text-muted-foreground font-medium block mb-2">Available to Link</span>
+                    <div className="flex flex-wrap gap-2">
+                      {allSections.filter(s => s.id !== section.id && !dependencies.includes(s.id)).map(otherSection => (
                         <button
                           key={otherSection.id}
                           onClick={() => toggleDependency(otherSection.id)}
-                          className={cn(
-                            "text-[10px] px-2 py-1 rounded border transition-all flex items-center gap-1",
-                            isLinked 
-                              ? "bg-blue-50 border-blue-200 text-blue-700 shadow-sm" 
-                              : "bg-background border-border text-muted-foreground hover:border-blue-200 hover:text-foreground"
-                          )}
+                          className="text-[10px] px-2 py-1 rounded border border-dashed border-muted-foreground/30 bg-muted/20 text-muted-foreground hover:bg-muted/50 hover:text-foreground hover:border-muted-foreground/50 transition-all flex items-center gap-1.5"
                         >
-                          {isLinked ? <Link size={10} /> : <Plus size={10} />}
+                          <Plus size={10} />
                           <span className="max-w-[100px] truncate">{otherSection.title || 'Untitled'}</span>
                         </button>
-                      );
-                    })}
-                    {allSections.length <= 1 && (
-                      <span className="text-[10px] text-muted-foreground italic">No other sections available to link.</span>
-                    )}
+                      ))}
+                      {allSections.filter(s => s.id !== section.id && !dependencies.includes(s.id)).length === 0 && allSections.length > 1 && (
+                         <span className="text-[10px] text-muted-foreground italic px-1">All other sections are already linked.</span>
+                      )}
+                      {allSections.length <= 1 && (
+                        <span className="text-[10px] text-muted-foreground italic px-1">No other sections available to link.</span>
+                      )}
+                    </div>
                   </div>
                 </div>
               </div>
