@@ -20,7 +20,10 @@ import {
   Settings2,
   Play,
   History,
-  AlertCircle
+  AlertCircle,
+  Clock,
+  User,
+  Bot
 } from 'lucide-react';
 import { 
   DropdownMenu, 
@@ -435,6 +438,7 @@ export default function Editor() {
   const { getDocument, updateSection, addSection, generateChildDocument } = useDocuments();
   const [doc, setDoc] = useState<any>(null);
   const [showGraph, setShowGraph] = useState(true);
+  const [showDocHistory, setShowDocHistory] = useState(false);
 
   // Effect to handle document changes/routing
   useEffect(() => {
@@ -551,10 +555,25 @@ export default function Editor() {
 
             {/* Doc Header */}
             <div className="mb-12 group">
-              <div className="flex items-center gap-2 text-sm text-muted-foreground mb-4">
-                 <span className="uppercase tracking-widest text-[10px] font-semibold border border-border px-2 py-0.5 rounded-full">
-                   {doc.type}
-                 </span>
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                   <span className="uppercase tracking-widest text-[10px] font-semibold border border-border px-2 py-0.5 rounded-full">
+                     {doc.type}
+                   </span>
+                </div>
+                
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  className={cn(
+                    "h-8 gap-2 text-xs font-medium transition-colors", 
+                    showDocHistory ? "text-primary bg-primary/5" : "text-muted-foreground hover:text-foreground"
+                  )}
+                  onClick={() => setShowDocHistory(!showDocHistory)}
+                >
+                  <History size={14} />
+                  <span>History</span>
+                </Button>
               </div>
               
               <h1 
@@ -572,8 +591,69 @@ export default function Editor() {
                 <span>{new Date(doc.createdAt).toLocaleDateString()}</span>
                 <span className="w-1 h-1 rounded-full bg-muted-foreground/50" />
                 <span>{doc.sections.length} sections</span>
+                {doc.history && (
+                    <>
+                        <span className="w-1 h-1 rounded-full bg-muted-foreground/50" />
+                        <span>{doc.history.length} changes</span>
+                    </>
+                )}
               </div>
             </div>
+
+            {/* Document History Panel */}
+            <AnimatePresence>
+                {showDocHistory && doc.history && (
+                    <motion.div
+                        initial={{ opacity: 0, height: 0 }}
+                        animate={{ opacity: 1, height: 'auto' }}
+                        exit={{ opacity: 0, height: 0 }}
+                        className="mb-12 overflow-hidden"
+                    >
+                        <div className="bg-muted/30 border border-border rounded-xl p-6 relative">
+                            <h3 className="text-sm font-semibold uppercase tracking-widest text-muted-foreground mb-6 flex items-center gap-2">
+                                <Clock size={14} /> Document Timeline
+                            </h3>
+
+                            <div className="space-y-6 relative ml-2">
+                                {/* Timeline Line */}
+                                <div className="absolute left-[7px] top-2 bottom-2 w-px bg-border" />
+
+                                {doc.history.map((item: any) => (
+                                    <div key={item.id} className="relative flex gap-4 group">
+                                        <div className={cn(
+                                            "w-4 h-4 rounded-full border-2 z-10 shrink-0 bg-background flex items-center justify-center mt-0.5",
+                                            item.actor === 'AI' ? "border-emerald-500 text-emerald-500" : "border-muted-foreground text-muted-foreground"
+                                        )}>
+                                            <div className={cn("w-1.5 h-1.5 rounded-full", item.actor === 'AI' ? "bg-emerald-500" : "bg-muted-foreground")} />
+                                        </div>
+                                        <div className="flex-1">
+                                            <div className="flex items-center gap-2 mb-1">
+                                                <span className="text-xs font-semibold text-foreground">{item.action}</span>
+                                                <span className="text-[10px] text-muted-foreground px-1.5 py-0.5 rounded bg-background border">
+                                                    {new Date(item.timestamp).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
+                                                </span>
+                                                {item.actor === 'AI' && (
+                                                    <span className="text-[10px] font-bold text-emerald-600 bg-emerald-50 px-1.5 rounded flex items-center gap-1">
+                                                        <Bot size={10} /> AI
+                                                    </span>
+                                                )}
+                                                {item.actor === 'User' && (
+                                                     <span className="text-[10px] font-medium text-muted-foreground bg-muted px-1.5 rounded flex items-center gap-1 opacity-60">
+                                                        <User size={10} /> You
+                                                    </span>
+                                                )}
+                                            </div>
+                                            <p className="text-sm text-muted-foreground/80 font-serif leading-relaxed">
+                                                {item.description}
+                                            </p>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
 
             {/* Sections Flow */}
             <div className="space-y-8 relative border-l border-border/50 md:border-l-0 ml-4 md:ml-0 pb-12">

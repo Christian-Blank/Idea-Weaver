@@ -17,6 +17,14 @@ export interface Section {
   history?: { content: string; timestamp: Date; }[];
 }
 
+export interface DocumentHistoryItem {
+  id: string;
+  timestamp: Date;
+  actor: 'User' | 'AI' | 'System';
+  action: string;
+  description?: string;
+}
+
 export interface Document {
   id: string;
   title: string;
@@ -24,6 +32,7 @@ export interface Document {
   parentId?: string;
   childrenIds: string[];
   sections: Section[];
+  history?: DocumentHistoryItem[];
   createdAt: Date;
   updatedAt: Date;
 }
@@ -146,6 +155,43 @@ const INITIAL_DOCS: Document[] = [
     childrenIds: ['flow-1', 'spec-4', 'spec-5'],
     createdAt: new Date('2024-01-07'),
     updatedAt: new Date('2024-01-08'),
+    history: [
+      {
+        id: 'h1',
+        timestamp: new Date('2024-01-07T09:00:00'),
+        actor: 'User',
+        action: 'Created document',
+        description: 'Initial draft started from "FlowState MVP Specification"'
+      },
+      {
+        id: 'h2',
+        timestamp: new Date('2024-01-07T10:15:00'),
+        actor: 'User',
+        action: 'Updated section "Overview"',
+        description: 'Defined initial list-based concept'
+      },
+      {
+        id: 'h3',
+        timestamp: new Date('2024-01-07T11:45:00'),
+        actor: 'AI',
+        action: 'Refined section "Overview"',
+        description: 'Suggestion applied: Switch to spatial view'
+      },
+      {
+        id: 'h4',
+        timestamp: new Date('2024-01-07T14:20:00'),
+        actor: 'User',
+        action: 'Added section "Interactions"',
+        description: 'Added pan, zoom, and reorganize capabilities'
+      },
+      {
+        id: 'h5',
+        timestamp: new Date('2024-01-08T09:30:00'),
+        actor: 'User',
+        action: 'Finalized "Overview"',
+        description: 'Polished text and marked as completed'
+      }
+    ],
     sections: [
       {
         id: 'sec-6',
