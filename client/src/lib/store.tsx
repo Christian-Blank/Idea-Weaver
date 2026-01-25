@@ -9,7 +9,7 @@ export interface Rule {
   name: string;
   instruction: string;
   category: 'Style' | 'Format' | 'Tone' | 'Safety' | 'Custom';
-  history?: { instruction: string; timestamp: Date; }[];
+  history?: { instruction: string; timestamp: Date; user: string; }[];
 }
 
 export interface RuleGroup {
@@ -31,7 +31,7 @@ export interface Section {
   ruleIds?: string[]; // Active library rules
   groupIds?: string[]; // Active library rule groups
   executionMode?: 'manual' | 'auto' | 'disabled';
-  history?: { content: string; timestamp: Date; }[];
+  history?: { content: string; timestamp: Date; user: string; }[];
 }
 
 export interface DocumentHistoryItem {
@@ -507,7 +507,7 @@ export function DocumentProvider({ children }: { children: React.ReactNode }) {
     // If instruction is changing, save to history
     if (updates.instruction && updates.instruction !== r.instruction) {
         const newHistory = [
-            { instruction: r.instruction, timestamp: new Date() },
+            { instruction: r.instruction, timestamp: new Date(), user: 'You' },
             ...(r.history || [])
         ];
         return { ...r, ...updates, history: newHistory };

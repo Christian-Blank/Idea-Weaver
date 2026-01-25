@@ -201,7 +201,7 @@ const SectionBlock = ({
 
     // Push current state to history before restoring
     const newHistory = [
-      { content: section.content, timestamp: new Date() },
+      { content: section.content, timestamp: new Date(), user: 'You' },
       ...(section.history || [])
     ];
     
@@ -578,7 +578,10 @@ const SectionBlock = ({
                     history.map((item, idx) => (
                       <div key={idx} className="bg-background rounded-md border p-2 text-xs flex flex-col gap-2 group hover:border-primary/50 transition-colors">
                         <div className="flex justify-between items-center text-[10px] text-muted-foreground">
-                          <span>{new Date(item.timestamp).toLocaleTimeString()} · {new Date(item.timestamp).toLocaleDateString()}</span>
+                          <div className="flex flex-col">
+                              <span>{new Date(item.timestamp).toLocaleTimeString()} · {new Date(item.timestamp).toLocaleDateString()}</span>
+                              <span className="font-semibold text-primary/70">{item.user || 'Unknown User'}</span>
+                          </div>
                           <Button 
                             size="sm" 
                             variant="ghost" 

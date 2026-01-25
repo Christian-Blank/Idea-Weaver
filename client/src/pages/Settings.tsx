@@ -441,7 +441,10 @@ export default function Settings() {
                                                 {ruleForm.history.map((h, idx) => (
                                                     <div key={idx} className="text-xs bg-white p-2 rounded border border-slate-100 flex flex-col gap-1 group">
                                                         <div className="flex justify-between text-slate-400">
-                                                            <span>{new Date(h.timestamp).toLocaleString()}</span>
+                                                            <div className="flex flex-col">
+                                                                <span>{new Date(h.timestamp).toLocaleString()}</span>
+                                                                <span className="font-semibold text-slate-500 text-[10px]">{h.user || 'Unknown User'}</span>
+                                                            </div>
                                                             <button 
                                                                 className="text-blue-500 hover:underline opacity-0 group-hover:opacity-100 transition-opacity"
                                                                 onClick={() => setRuleForm({ ...ruleForm, instruction: h.instruction })}
