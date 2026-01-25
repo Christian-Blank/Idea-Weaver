@@ -3,13 +3,11 @@ import { useLocation } from "wouter";
 import { useDocuments } from '../lib/store';
 import { Button } from './ui/button';
 import { 
-  Book, 
   Plus, 
   GitBranch, 
   Settings, 
-  FileText, 
-  ChevronRight,
-  Menu
+  Menu,
+  Home
 } from 'lucide-react';
 import { Sheet, SheetContent, SheetTrigger } from './ui/sheet';
 import { cn } from '../lib/utils';
@@ -21,7 +19,10 @@ export function Layout({ children }: { children: React.ReactNode }) {
 
   const NavContent = () => (
     <div className="flex flex-col h-full bg-sidebar border-r border-sidebar-border w-64 p-4">
-      <div className="flex items-center gap-2 mb-8 px-2">
+      <div 
+        className="flex items-center gap-2 mb-8 px-2 cursor-pointer hover:opacity-80 transition-opacity"
+        onClick={() => setLocation('/')}
+      >
         <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center text-primary-foreground">
           <GitBranch size={18} />
         </div>
@@ -29,6 +30,18 @@ export function Layout({ children }: { children: React.ReactNode }) {
       </div>
 
       <div className="space-y-1 mb-6">
+        <Button 
+          variant={location === '/' ? 'secondary' : 'ghost'}
+          className="w-full justify-start gap-2 mb-2"
+          onClick={() => {
+            setLocation('/');
+            setIsMobileMenuOpen(false);
+          }}
+        >
+          <Home size={16} />
+          Dashboard
+        </Button>
+
         <Button 
           variant="outline" 
           className="w-full justify-start gap-2 border-dashed border-primary/20 hover:border-primary/50 text-muted-foreground hover:text-foreground transition-all"
@@ -99,7 +112,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
 
       {/* Mobile Header & Sheet */}
       <div className="md:hidden fixed top-0 left-0 right-0 h-14 bg-background/80 backdrop-blur-md border-b z-50 flex items-center px-4 justify-between">
-         <div className="flex items-center gap-2">
+         <div className="flex items-center gap-2" onClick={() => setLocation('/')}>
             <div className="w-6 h-6 rounded bg-primary flex items-center justify-center text-primary-foreground">
               <GitBranch size={14} />
             </div>

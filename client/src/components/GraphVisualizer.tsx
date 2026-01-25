@@ -1,23 +1,38 @@
 import React from 'react';
 import { useDocuments } from '../lib/store';
 import { motion } from 'framer-motion';
-import { GitBranch, FileText, Sparkles } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { useLocation } from 'wouter';
 
 export function GraphVisualizer({ 
   activeDocId, 
-  className 
+  rootId,
+  className,
+  onNodeClick
 }: { 
   activeDocId?: string, 
-  className?: string 
+  rootId?: string,
+  className?: string,
+  onNodeClick?: (docId: string) => void
 }) {
   const { documents, getDocument, setCurrentDocId } = useDocuments();
   const [_, setLocation] = useLocation();
 
-  // Build a simple tree structure for visualization
-  // Start with root docs (no parent)
-  const rootDocs = documents.filter(d => !d.parentId);
+  // If rootId is provided, just render that tree.
+  // Otherwise, render all root docs (docs with no parent).
+  const rootDocs = rootId 
+    ? [getDocument(rootId)].filter(Boolean) 
+    : documents.filter(d => !d.parentId);
+
+  const handleNodeClick = (docId: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (onNodeClick) {
+      onNodeClick(docId);
+    } else {
+      setCurrentDocId(docId);
+      setLocation(`/editor/${docId}`);
+    }
+  };
 
   const renderNode = (docId: string, depth: number = 0) => {
     const doc = getDocument(docId);
@@ -29,13 +44,10 @@ export function GraphVisualizer({
     return (
       <div key={doc.id} className="relative">
         <div className={cn(
-          "flex items-center gap-2 mb-2 group cursor-pointer",
-          isActive ? "opacity-100" : "opacity-70 hover:opacity-100"
+          "flex items-center gap-2 mb-2 group cursor-pointer transition-opacity",
+          isActive ? "opacity-100" : "opacity-80 hover:opacity-100"
         )}
-        onClick={() => {
-          setCurrentDocId(doc.id);
-          setLocation(`/editor/${doc.id}`);
-        }}
+        onClick={(e) => handleNodeClick(doc.id, e)}
         >
           {/* Node Point */}
           <motion.div 
@@ -86,7 +98,7 @@ export function GraphVisualizer({
 
   return (
     <div className={cn("p-4", className)}>
-      {rootDocs.map(doc => renderNode(doc.id))}
+      {rootDocs.map(doc => doc && renderNode(doc.id))}
     </div>
   );
 }
