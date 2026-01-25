@@ -76,6 +76,11 @@ interface DocumentContextType {
   updateDocumentType: (id: string, updates: Partial<DocumentType>) => void;
   addTemplate: (t: DocumentTemplate) => void;
   updateTemplate: (id: string, updates: Partial<DocumentTemplate>) => void;
+  deleteTemplate: (id: string) => void;
+  duplicateTemplate: (id: string) => void;
+  deleteDocument: (id: string) => void;
+  duplicateDocument: (id: string) => void;
+  deleteDocumentType: (id: string) => void;
 }
 
 // --- Mock Data ---
@@ -519,6 +524,96 @@ export function DocumentProvider({ children }: { children: React.ReactNode }) {
     setTemplates(prev => prev.map(t => t.id === id ? { ...t, ...updates } : t));
   };
 
+  const deleteTemplate = (id: string) => {
+    setTemplates(prev => prev.filter(t => t.id !== id));
+  };
+
+  const duplicateTemplate = (id: string) => {
+    const template = templates.find(t => t.id === id);
+    if (!template) return;
+    
+    addTemplate({
+      ...template,
+      id: `tpl-${Date.now()}`,
+      name: `${template.name} (Copy)`,
+    });
+  };
+
+  const deleteDocument = (id: string) => {
+    // Recursive delete helper could be added here to remove children,
+    // but for now we'll just remove the document itself and let children become orphans or handle UI-side
+    // A better approach for a tree is to delete all descendants.
+    
+    const getAllDescendantIds = (docId: string, allDocs: Document[]): string[] => {
+        const doc = allDocs.find(d => d.id === docId);
+        if (!doc) return [];
+        let descendants: string[] = [];
+        for (const childId of doc.childrenIds) {
+            descendants.push(childId);
+            descendants = [...descendants, ...getAllDescendantIds(childId, allDocs)];
+        }
+        return descendants;
+    };
+
+    setDocuments(prev => {
+        const descendants = getAllDescendantIds(id, prev);
+        const idsToDelete = [id, ...descendants];
+        
+        // Remove from parent's children list
+        const docToDelete = prev.find(d => d.id === id);
+        let newDocs = prev.filter(d => !idsToDelete.includes(d.id));
+        
+        if (docToDelete?.parentId) {
+            newDocs = newDocs.map(d => 
+                d.id === docToDelete.parentId 
+                    ? { ...d, childrenIds: d.childrenIds.filter(cid => cid !== id) }
+                    : d
+            );
+        }
+        
+        return newDocs;
+    });
+
+    if (currentDocId === id) setCurrentDocId(null);
+  };
+
+  const duplicateDocument = (id: string) => {
+    const doc = documents.find(d => d.id === id);
+    if (!doc) return;
+
+    // Deep copy of the single document (not children for now, to keep it simple)
+    const newDoc: Document = {
+      ...doc,
+      id: `doc-${Date.now()}`,
+      title: `${doc.title} (Copy)`,
+      childrenIds: [], // Don't copy children references, it's a new branch
+      createdAt: new Date(),
+      updatedAt: new Date(),
+      sections: doc.sections.map((s, idx) => ({
+        ...s,
+        id: `sec-${Date.now()}-${idx}`, // New IDs for sections
+        history: [] // Reset history for copy
+      }))
+    };
+
+    setDocuments(prev => {
+        // If it has a parent, add to parent's children
+        let newDocs = [...prev, newDoc];
+        if (newDoc.parentId) {
+            newDocs = newDocs.map(d => 
+                d.id === newDoc.parentId 
+                    ? { ...d, childrenIds: [...d.childrenIds, newDoc.id] }
+                    : d
+            );
+        }
+        return newDocs;
+    });
+  };
+
+  const deleteDocumentType = (id: string) => {
+      setDocumentTypes(prev => prev.filter(dt => dt.id !== id));
+  };
+
   return (
     <DocumentContext.Provider value={{
       documents,
@@ -538,7 +633,12 @@ export function DocumentProvider({ children }: { children: React.ReactNode }) {
       addDocumentType,
       updateDocumentType,
       addTemplate,
-      updateTemplate
+      updateTemplate,
+      deleteTemplate,
+      duplicateTemplate,
+      deleteDocument,
+      duplicateDocument,
+      deleteDocumentType
     }}>
       {children}
     </DocumentContext.Provider>

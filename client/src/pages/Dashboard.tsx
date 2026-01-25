@@ -11,15 +11,31 @@ import {
   Lightbulb, 
   ChevronRight,
   Settings,
-  LayoutTemplate
+  LayoutTemplate,
+  Trash2,
+  Copy
 } from 'lucide-react';
 import { Button } from '../components/ui/button';
 import { useDocuments, DocumentTemplate } from '../lib/store';
 import { formatDistanceToNow } from 'date-fns';
+import { 
+  DropdownMenu, 
+  DropdownMenuContent, 
+  DropdownMenuItem, 
+  DropdownMenuTrigger,
+  DropdownMenuSeparator
+} from '../components/ui/dropdown-menu';
 
 export default function Dashboard() {
   const [location, setLocation] = useLocation();
-  const { documents, createDocument, templates, documentTypes } = useDocuments();
+  const { 
+    documents, 
+    createDocument, 
+    templates, 
+    documentTypes, 
+    deleteDocument, 
+    duplicateDocument 
+  } = useDocuments();
 
   const handleCreate = (template: DocumentTemplate) => {
     // We pass the document type ID from the template, but in a real app createDocument 
@@ -29,6 +45,18 @@ export default function Dashboard() {
 
     const newId = createDocument(typeObj.code, undefined, template.id);
     setLocation(`/editor/${newId}`);
+  };
+
+  const handleDeleteDoc = (e: React.MouseEvent, id: string) => {
+    e.stopPropagation();
+    if (confirm('Are you sure you want to delete this document? This cannot be undone.')) {
+      deleteDocument(id);
+    }
+  };
+
+  const handleDuplicateDoc = (e: React.MouseEvent, id: string) => {
+    e.stopPropagation();
+    duplicateDocument(id);
   };
 
   return (
@@ -153,9 +181,31 @@ export default function Dashboard() {
                       <div className="w-6 h-6 rounded-full bg-blue-100 border-2 border-white flex items-center justify-center text-[10px] font-bold text-blue-700">AI</div>
                       <div className="w-6 h-6 rounded-full bg-slate-200 border-2 border-white flex items-center justify-center text-[10px] font-bold text-slate-600">You</div>
                     </div>
-                    <Button variant="ghost" size="icon" className="text-slate-400 hover:text-slate-900">
-                      <MoreVertical size={16} />
-                    </Button>
+                    
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button 
+                          variant="ghost" 
+                          size="icon" 
+                          className="text-slate-400 hover:text-slate-900"
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          <MoreVertical size={16} />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem onClick={(e) => handleDuplicateDoc(e, doc.id)}>
+                          <Copy size={14} className="mr-2" /> Duplicate
+                        </DropdownMenuItem>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem 
+                          className="text-red-600 focus:text-red-600"
+                          onClick={(e) => handleDeleteDoc(e, doc.id)}
+                        >
+                          <Trash2 size={14} className="mr-2" /> Delete
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
                   </div>
                 </div>
               );

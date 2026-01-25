@@ -15,7 +15,8 @@ import {
   Save, 
   Lightbulb, 
   Palette,
-  LayoutTemplate
+  LayoutTemplate,
+  Copy
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -27,9 +28,12 @@ export default function Settings() {
     documentTypes, 
     addDocumentType, 
     updateDocumentType,
+    deleteDocumentType,
     templates,
     addTemplate,
-    updateTemplate
+    updateTemplate,
+    deleteTemplate,
+    duplicateTemplate
   } = useDocuments();
 
   const [activeTab, setActiveTab] = useState<'general' | 'types' | 'templates'>('general');
@@ -243,7 +247,16 @@ export default function Settings() {
                               <p className="text-xs text-slate-500 font-mono">{type.code}</p>
                             </div>
                           </div>
-                          <Button variant="ghost" size="icon" className="text-slate-400 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity">
+                          <Button 
+                            variant="ghost" 
+                            size="icon" 
+                            className="text-slate-400 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity"
+                            onClick={() => {
+                                if (confirm('Delete this document type?')) {
+                                    deleteDocumentType(type.id);
+                                }
+                            }}
+                          >
                             <Trash2 size={16} />
                           </Button>
                         </div>
@@ -352,9 +365,28 @@ export default function Settings() {
                                 </div>
                               </div>
                             </div>
-                            <Button variant="ghost" size="icon" className="text-slate-400 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity">
-                              <Trash2 size={16} />
-                            </Button>
+                            <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                <Button 
+                                  variant="ghost" 
+                                  size="icon" 
+                                  className="text-slate-400 hover:text-blue-500"
+                                  onClick={() => duplicateTemplate(tpl.id)}
+                                >
+                                  <Copy size={16} />
+                                </Button>
+                                <Button 
+                                  variant="ghost" 
+                                  size="icon" 
+                                  className="text-slate-400 hover:text-red-500"
+                                  onClick={() => {
+                                      if (confirm('Delete this template?')) {
+                                          deleteTemplate(tpl.id);
+                                      }
+                                  }}
+                                >
+                                  <Trash2 size={16} />
+                                </Button>
+                            </div>
                           </div>
                         </div>
                       );
