@@ -17,7 +17,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 
 export default function Auth() {
   const [isLogin, setIsLogin] = useState(true);
-  const [email, setEmail] = useState('');
+  const [email, setEmail] = useState('alex@flowstate.ai'); // Default to Alex for quick demo
   const [password, setPassword] = useState('');
   const [name, setName] = useState('');
   const [error, setError] = useState<string | null>(null);
@@ -33,12 +33,19 @@ export default function Auth() {
     // Simulate network delay
     setTimeout(() => {
         if (isLogin) {
+            // For mockup: if password is blank, we just allow it for the demo flow
             const success = login(email);
             if (success) {
                 setLocation('/');
             } else {
-                setError('Invalid credentials. Try "alex@flowstate.ai"');
-                setIsLoading(false);
+                // If the user doesn't exist, create a temporary one for this session to unblock the user
+                if (email) {
+                    signup(email.split('@')[0], email);
+                    setLocation('/');
+                } else {
+                    setError('Invalid credentials. Try "alex@flowstate.ai"');
+                    setIsLoading(false);
+                }
             }
         } else {
             if (!name || !email) {
@@ -171,14 +178,14 @@ export default function Auth() {
             <div className="mt-8 pt-6 border-t border-slate-100">
                 <p className="text-xs text-center text-slate-500 mb-4">Or continue with</p>
                 <div className="grid grid-cols-2 gap-3">
-                    <Button variant="outline" className="w-full" onClick={() => {
+                    <Button type="button" variant="outline" className="w-full" onClick={() => {
                         // Demo shortcut
                         login('alex@flowstate.ai');
                         setLocation('/');
                     }}>
                         <Github size={16} className="mr-2" /> GitHub
                     </Button>
-                    <Button variant="outline" className="w-full" onClick={() => {
+                    <Button type="button" variant="outline" className="w-full" onClick={() => {
                          // Demo shortcut
                          login('sarah@flowstate.ai');
                          setLocation('/');
