@@ -23,7 +23,10 @@ import {
   AlertCircle,
   Clock,
   User,
-  Bot
+  Bot,
+  Link,
+  Unlink,
+  AlertTriangle
 } from 'lucide-react';
 import { 
   DropdownMenu, 
@@ -42,22 +45,61 @@ import { motion, AnimatePresence } from 'framer-motion';
 const SectionBlock = ({ 
   docId, 
   section, 
+  allSections,
   onUpdate 
 }: { 
   docId: string, 
   section: Section, 
+  allSections: Section[],
   onUpdate: (id: string, updates: Partial<Section>) => void 
 }) => {
   const [isEditing, setIsEditing] = useState(false);
   const [showRules, setShowRules] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
   const [previewContent, setPreviewContent] = useState<string | null>(null);
+  const [dependencyError, setDependencyError] = useState<string | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   
   // Default values if not present
   const executionMode = section.executionMode || 'disabled';
   const rules = section.rules || '';
   const history = section.history || [];
+  const dependencies = section.dependencies || [];
+
+  // Cycle Detection Helper
+  const hasCycle = (targetId: string, visited = new Set<string>()): boolean => {
+    if (targetId === section.id) return true; // Cycle back to self
+    if (visited.has(targetId)) return false; // Already checked this path
+    
+    visited.add(targetId);
+    
+    const targetSection = allSections.find(s => s.id === targetId);
+    if (!targetSection || !targetSection.dependencies) return false;
+    
+    for (const depId of targetSection.dependencies) {
+      if (hasCycle(depId, new Set(visited))) return true;
+    }
+    
+    return false;
+  };
+
+  const toggleDependency = (targetId: string) => {
+    if (dependencies.includes(targetId)) {
+      // Remove dependency
+      onUpdate(section.id, { dependencies: dependencies.filter(id => id !== targetId) });
+      setDependencyError(null);
+    } else {
+      // Check for cycle before adding
+      if (hasCycle(targetId)) {
+        setDependencyError(`Cannot add dependency: Circular reference detected with "${allSections.find(s => s.id === targetId)?.title || 'Unknown'}"`);
+        // Clear error after 3 seconds
+        setTimeout(() => setDependencyError(null), 3000);
+        return;
+      }
+      onUpdate(section.id, { dependencies: [...dependencies, targetId] });
+      setDependencyError(null);
+    }
+  };
 
   // Auto-resize textarea
   useEffect(() => {
@@ -143,6 +185,14 @@ const SectionBlock = ({
             placeholder="Section Title..."
           />
           <div className="flex items-center gap-1">
+             {/* Dependencies Indicator */}
+             {dependencies.length > 0 && (
+               <div className="hidden md:flex items-center gap-1 mr-2 px-2 py-0.5 rounded-full bg-blue-50/50 border border-blue-100 text-[10px] text-blue-600">
+                 <Link size={10} />
+                 <span>Depends on {dependencies.length} section{dependencies.length > 1 ? 's' : ''}</span>
+               </div>
+             )}
+
              {/* Rules Toggle */}
              <Tooltip>
                <TooltipTrigger asChild>
@@ -287,6 +337,48 @@ const SectionBlock = ({
                          <Play size={10} className="mr-1" /> Run Now
                        </Button>
                      )}
+                  </div>
+                </div>
+
+                {/* Dependencies Section */}
+                <div className="pt-2 border-t border-border/50">
+                  <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2 flex items-center gap-2">
+                    <Link size={12} /> Data Dependencies
+                  </div>
+                  
+                  {dependencyError && (
+                    <motion.div 
+                      initial={{ opacity: 0, y: -5 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      className="mb-2 p-2 bg-destructive/10 text-destructive text-[10px] rounded flex items-center gap-2 border border-destructive/20"
+                    >
+                      <AlertTriangle size={12} />
+                      {dependencyError}
+                    </motion.div>
+                  )}
+
+                  <div className="flex flex-wrap gap-2">
+                    {allSections.filter(s => s.id !== section.id).map(otherSection => {
+                      const isLinked = dependencies.includes(otherSection.id);
+                      return (
+                        <button
+                          key={otherSection.id}
+                          onClick={() => toggleDependency(otherSection.id)}
+                          className={cn(
+                            "text-[10px] px-2 py-1 rounded border transition-all flex items-center gap-1",
+                            isLinked 
+                              ? "bg-blue-50 border-blue-200 text-blue-700 shadow-sm" 
+                              : "bg-background border-border text-muted-foreground hover:border-blue-200 hover:text-foreground"
+                          )}
+                        >
+                          {isLinked ? <Link size={10} /> : <Plus size={10} />}
+                          <span className="max-w-[100px] truncate">{otherSection.title || 'Untitled'}</span>
+                        </button>
+                      );
+                    })}
+                    {allSections.length <= 1 && (
+                      <span className="text-[10px] text-muted-foreground italic">No other sections available to link.</span>
+                    )}
                   </div>
                 </div>
               </div>
@@ -661,7 +753,8 @@ export default function Editor() {
                  <SectionBlock 
                    key={section.id} 
                    docId={doc.id} 
-                   section={section} 
+                   section={section}
+                   allSections={doc.sections} 
                    onUpdate={(id, updates) => updateSection(doc.id, id, updates)} 
                  />
                ))}
