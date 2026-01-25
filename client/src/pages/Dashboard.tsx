@@ -1,187 +1,168 @@
 import React from 'react';
-import { useDocuments } from '../lib/store';
-import { useLocation } from 'wouter';
-import { Layout } from '../components/Layout';
+import { useLocation } from "wouter";
+import { 
+  Plus, 
+  Search, 
+  Filter, 
+  MoreVertical, 
+  Clock, 
+  GitBranch, 
+  FileText, 
+  Lightbulb, 
+  ChevronRight,
+  Settings,
+  LayoutTemplate
+} from 'lucide-react';
 import { Button } from '../components/ui/button';
-import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '../components/ui/card';
-import { Plus, Clock, ArrowRight, Sparkles, GitBranch } from 'lucide-react';
-import { motion } from 'framer-motion';
-import { GraphVisualizer } from '../components/GraphVisualizer';
-import { ScrollArea } from '../components/ui/scroll-area';
+import { useDocuments, DocumentTemplate } from '../lib/store';
+import { formatDistanceToNow } from 'date-fns';
 
 export default function Dashboard() {
-  const { documents, createDocument, setCurrentDocId } = useDocuments();
-  const [_, setLocation] = useLocation();
+  const [location, setLocation] = useLocation();
+  const { documents, createDocument, templates, documentTypes } = useDocuments();
 
-  const handleCreate = (type: 'idea' | 'spec' | 'flow') => {
-    const id = createDocument(type);
-    setCurrentDocId(id);
-    setLocation(`/editor/${id}`);
+  const handleCreate = (template: DocumentTemplate) => {
+    // We pass the document type ID from the template, but in a real app createDocument 
+    // would look up the type code. For now we just pass the type code directly if we can find it
+    const typeObj = documentTypes.find(dt => dt.id === template.typeId);
+    if (!typeObj) return;
+
+    const newId = createDocument(typeObj.code, undefined, template.id);
+    setLocation(`/editor/${newId}`);
   };
 
-  // Filter for root documents (Projects)
-  const rootDocuments = documents.filter(doc => !doc.parentId);
-
-  const Legend = () => (
-    <div className="flex gap-4 items-center text-xs text-muted-foreground border p-2 rounded-lg bg-card/50 backdrop-blur-sm">
-      <span className="font-semibold mr-2">Legend:</span>
-      <div className="flex items-center gap-1.5">
-        <div className="w-2.5 h-2.5 rounded-full bg-amber-400 shadow-sm" />
-        <span>Idea</span>
-      </div>
-      <div className="flex items-center gap-1.5">
-        <div className="w-2.5 h-2.5 rounded-full bg-blue-400 shadow-sm" />
-        <span>Spec</span>
-      </div>
-      <div className="flex items-center gap-1.5">
-        <div className="w-2.5 h-2.5 rounded-full bg-emerald-400 shadow-sm" />
-        <span>Flow</span>
-      </div>
-    </div>
-  );
-
   return (
-    <Layout>
-      <ScrollArea className="h-full">
-        <div className="p-6 md:p-12 max-w-7xl mx-auto pb-20">
-          
-          {/* Welcome Hero */}
-          <div className="mb-12 text-center md:text-left">
-            <h1 className="text-4xl font-serif font-bold text-foreground mb-3">
-              Good Morning.
+    <div className="min-h-screen bg-[#F9F9F7] text-slate-900 font-sans selection:bg-blue-100/50">
+      <div className="max-w-6xl mx-auto p-6 md:p-12">
+        {/* Header */}
+        <header className="mb-12 flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl md:text-4xl font-serif font-bold text-slate-900 tracking-tight mb-2">
+              FlowState
             </h1>
-            <p className="text-muted-foreground text-lg max-w-xl">
-              Ready to capture your next big idea? Select a template to start your flow.
+            <p className="text-slate-500 font-medium">
+              Where ideas become structured reality.
             </p>
           </div>
+          <div className="flex gap-3">
+             <Button 
+              variant="outline" 
+              className="gap-2 bg-white/50"
+              onClick={() => setLocation('/settings')}
+            >
+              <Settings size={18} />
+              Workspace Settings
+            </Button>
+            <div className="relative">
+              <div className="absolute inset-y-0 left-3 flex items-center pointer-events-none">
+                <Search size={18} className="text-slate-400" />
+              </div>
+              <input 
+                type="text" 
+                placeholder="Search documents..." 
+                className="pl-10 pr-4 py-2 bg-white/50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-slate-200 w-64 transition-all"
+              />
+            </div>
+          </div>
+        </header>
 
-          {/* Templates Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-16">
-            {[
-              { 
-                type: 'idea', 
-                label: 'New Idea', 
-                desc: 'Capture raw thoughts and expand them with AI.', 
-                icon: Sparkles,
-                color: 'text-amber-500',
-                bg: 'bg-amber-500/10'
-              },
-              { 
-                type: 'spec', 
-                label: 'Product Spec', 
-                desc: 'Structured requirements and user stories.', 
-                icon: Clock,
-                color: 'text-blue-500',
-                bg: 'bg-blue-500/10'
-              },
-              { 
-                type: 'flow', 
-                label: 'UX Flow', 
-                desc: 'Define user journeys and interaction models.', 
-                icon: ArrowRight,
-                color: 'text-emerald-500',
-                bg: 'bg-emerald-500/10'
-              }
-            ].map((template) => (
-              <motion.div
-                key={template.type}
-                whileHover={{ y: -4 }}
-                transition={{ type: 'spring', stiffness: 300 }}
-              >
-                <Card 
-                  className="cursor-pointer hover:shadow-lg transition-all border-transparent hover:border-primary/10 group h-full flex flex-col bg-card/50 backdrop-blur-sm"
-                  onClick={() => handleCreate(template.type as any)}
+        {/* Quick Actions / Templates */}
+        <section className="mb-12">
+          <div className="flex items-center justify-between mb-6">
+             <h2 className="text-xs font-bold text-slate-400 uppercase tracking-widest">
+               Start from Template
+             </h2>
+             <Button variant="ghost" size="sm" className="text-xs text-blue-600 hover:text-blue-700" onClick={() => setLocation('/settings')}>
+               Manage Templates <ChevronRight size={12} className="ml-1" />
+             </Button>
+          </div>
+          
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {templates.slice(0, 3).map((template) => {
+               const type = documentTypes.find(dt => dt.id === template.typeId);
+               return (
+                <button 
+                  key={template.id}
+                  onClick={() => handleCreate(template)}
+                  className="group relative flex flex-col items-start p-6 bg-white rounded-xl border border-slate-200 shadow-sm hover:shadow-md hover:border-blue-200 transition-all text-left"
                 >
-                  <CardHeader>
-                    <div className={`w-12 h-12 rounded-xl ${template.bg} ${template.color} flex items-center justify-center mb-4 group-hover:scale-110 transition-transform`}>
-                      <template.icon size={24} />
+                  <div className={`p-3 rounded-lg ${type?.color.replace('text-', 'bg-').replace('border-', '') || 'bg-slate-100'} bg-opacity-20 mb-4 group-hover:scale-110 transition-transform`}>
+                    <div className={type?.color.split(' ')[1] || 'text-slate-600'}>
+                      <LayoutTemplate size={24} />
                     </div>
-                    <CardTitle className="font-serif text-xl">{template.label}</CardTitle>
-                    <CardDescription>{template.desc}</CardDescription>
-                  </CardHeader>
-                  <CardContent className="mt-auto pt-4">
-                    <div className="flex items-center text-sm font-medium text-primary opacity-0 group-hover:opacity-100 transition-opacity">
-                      Start writing <ArrowRight size={14} className="ml-1" />
-                    </div>
-                  </CardContent>
-                </Card>
-              </motion.div>
-            ))}
+                  </div>
+                  <h3 className="font-semibold text-slate-900 mb-1">{template.name}</h3>
+                  <p className="text-sm text-slate-500 mb-4 line-clamp-2">
+                    {template.description}
+                  </p>
+                  <div className="mt-auto flex items-center text-xs font-medium text-blue-600 opacity-0 group-hover:opacity-100 transition-opacity">
+                    Create Document <ChevronRight size={12} className="ml-1" />
+                  </div>
+                </button>
+               );
+            })}
+          </div>
+        </section>
+
+        {/* Recent Documents */}
+        <section>
+          <div className="flex items-center justify-between mb-6">
+            <h2 className="text-xs font-bold text-slate-400 uppercase tracking-widest">
+              Recent Documents
+            </h2>
+            <Button variant="ghost" size="sm" className="text-slate-500 hover:text-slate-900">
+              <Filter size={16} className="mr-2" /> Filter
+            </Button>
           </div>
 
-          {/* Projects View */}
-          <div className="space-y-6">
-            <div className="flex flex-col md:flex-row md:items-center justify-between border-b pb-4 gap-4">
-               <div>
-                 <h2 className="text-2xl font-serif font-bold tracking-tight">Your Projects</h2>
-                 <p className="text-muted-foreground text-sm mt-1">Overview of your document trees</p>
-               </div>
-               <Legend />
-            </div>
-            
-            <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
-              {rootDocuments.length === 0 ? (
-                <div className="col-span-full py-20 text-center border-2 border-dashed rounded-xl">
-                  <p className="text-muted-foreground">No projects yet. Start a new idea above!</p>
+          <div className="space-y-3">
+            {documents.map((doc) => {
+              const type = documentTypes.find(dt => dt.code === doc.type);
+              
+              return (
+                <div 
+                  key={doc.id}
+                  onClick={() => setLocation(`/editor/${doc.id}`)}
+                  className="group flex items-center p-4 bg-white rounded-xl border border-slate-200 shadow-sm hover:shadow-md hover:border-blue-200 transition-all cursor-pointer"
+                >
+                  <div className={`w-10 h-10 rounded-lg flex items-center justify-center mr-4 ${type?.color || 'bg-slate-100 text-slate-500'}`}>
+                    {type?.icon === 'Lightbulb' && <Lightbulb size={20} />}
+                    {type?.icon === 'FileText' && <FileText size={20} />}
+                    {type?.icon === 'GitBranch' && <GitBranch size={20} />}
+                    {!type && <FileText size={20} />}
+                  </div>
+                  
+                  <div className="flex-1 min-w-0">
+                    <h3 className="font-semibold text-slate-900 truncate group-hover:text-blue-600 transition-colors">
+                      {doc.title}
+                    </h3>
+                    <div className="flex items-center text-xs text-slate-500 mt-1">
+                      <span className="flex items-center font-medium">
+                        {type?.name || doc.type}
+                      </span>
+                      <span className="mx-2 text-slate-300">•</span>
+                      <span className="flex items-center">
+                        <Clock size={12} className="mr-1" />
+                        Edited {formatDistanceToNow(doc.updatedAt)} ago
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <div className="flex -space-x-2 mr-4">
+                      <div className="w-6 h-6 rounded-full bg-blue-100 border-2 border-white flex items-center justify-center text-[10px] font-bold text-blue-700">AI</div>
+                      <div className="w-6 h-6 rounded-full bg-slate-200 border-2 border-white flex items-center justify-center text-[10px] font-bold text-slate-600">You</div>
+                    </div>
+                    <Button variant="ghost" size="icon" className="text-slate-400 hover:text-slate-900">
+                      <MoreVertical size={16} />
+                    </Button>
+                  </div>
                 </div>
-              ) : (
-                rootDocuments.map((rootDoc) => (
-                  <motion.div
-                    key={rootDoc.id}
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                  >
-                    <Card className="h-full flex flex-col overflow-hidden hover:shadow-md transition-all border-border/60">
-                      <div className="p-4 border-b bg-muted/20 flex items-start justify-between">
-                        <div>
-                          <h3 
-                            className="font-serif font-bold text-lg hover:text-primary cursor-pointer transition-colors"
-                            onClick={() => {
-                              setCurrentDocId(rootDoc.id);
-                              setLocation(`/editor/${rootDoc.id}`);
-                            }}
-                          >
-                            {rootDoc.title}
-                          </h3>
-                          <div className="flex items-center gap-2 text-xs text-muted-foreground mt-1">
-                             <Clock size={12} />
-                             Updated {new Date(rootDoc.updatedAt).toLocaleDateString()}
-                          </div>
-                        </div>
-                        <Button 
-                          variant="ghost" 
-                          size="icon" 
-                          className="h-8 w-8"
-                          onClick={() => {
-                            setCurrentDocId(rootDoc.id);
-                            setLocation(`/editor/${rootDoc.id}`);
-                          }}
-                        >
-                          <ArrowRight size={16} />
-                        </Button>
-                      </div>
-                      
-                      <CardContent className="p-0 flex-1 min-h-[200px] bg-background relative group">
-                        <div className="absolute inset-0 bg-[radial-gradient(#e5e7eb_1px,transparent_1px)] [background-size:16px_16px] opacity-30 pointer-events-none" />
-                        <div className="p-4">
-                           <GraphVisualizer rootId={rootDoc.id} />
-                        </div>
-                        
-                        {/* Overlay to indicate interactivity or clickability */}
-                        <div className="absolute inset-0 bg-gradient-to-t from-background via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none flex items-end justify-center pb-4">
-                          <span className="text-xs font-medium bg-background/80 backdrop-blur px-3 py-1 rounded-full border shadow-sm">
-                            Click nodes to edit
-                          </span>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  </motion.div>
-                ))
-              )}
-            </div>
+              );
+            })}
           </div>
-        </div>
-      </ScrollArea>
-    </Layout>
+        </section>
+      </div>
+    </div>
   );
 }

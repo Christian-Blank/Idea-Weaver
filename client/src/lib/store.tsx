@@ -25,10 +25,29 @@ export interface DocumentHistoryItem {
   description?: string;
 }
 
+export interface DocumentType {
+  id: string;
+  name: string;
+  code: string;
+  color: string;
+  description: string;
+  defaultRules: string;
+  icon: string;
+}
+
+export interface DocumentTemplate {
+  id: string;
+  name: string;
+  description: string;
+  typeId: string;
+  rules: string;
+  initialSections: Omit<Section, 'id' | 'status'>[];
+}
+
 export interface Document {
   id: string;
   title: string;
-  type: 'idea' | 'spec' | 'flow' | 'custom';
+  type: string; // Changed from literal union to string to support dynamic types
   parentId?: string;
   childrenIds: string[];
   sections: Section[];
@@ -40,16 +59,23 @@ export interface Document {
 
 interface DocumentContextType {
   documents: Document[];
+  documentTypes: DocumentType[];
+  templates: DocumentTemplate[];
   currentDocId: string | null;
   setCurrentDocId: (id: string | null) => void;
-  createDocument: (type: Document['type'], parentId?: string) => string;
+  createDocument: (type: string, parentId?: string, templateId?: string) => string;
   updateSection: (docId: string, sectionId: string, updates: Partial<Section>) => void;
   updateDocument: (id: string, updates: Partial<Document>) => void;
   addSection: (docId: string, section: Section) => void;
-  generateChildDocument: (parentId: string, type: Document['type']) => void;
+  generateChildDocument: (parentId: string, type: string) => void;
   getDocument: (id: string) => Document | undefined;
+  getObjectType: (typeCode: string) => DocumentType | undefined;
   projectRules: string;
   setProjectRules: (rules: string) => void;
+  addDocumentType: (dt: DocumentType) => void;
+  updateDocumentType: (id: string, updates: Partial<DocumentType>) => void;
+  addTemplate: (t: DocumentTemplate) => void;
+  updateTemplate: (id: string, updates: Partial<DocumentTemplate>) => void;
 }
 
 // --- Mock Data ---
@@ -57,6 +83,72 @@ interface DocumentContextType {
 const INITIAL_PROJECT_RULES = `Always maintain a professional but creative tone.
 Prioritize user experience and accessibility.
 Use "Cognitive Flow" terminology where appropriate.`;
+
+const INITIAL_TYPES: DocumentType[] = [
+  {
+    id: 'dt-idea',
+    name: 'Idea',
+    code: 'idea',
+    color: 'bg-amber-100 text-amber-800 border-amber-200',
+    description: 'Initial concepts and north stars',
+    defaultRules: 'Focus on high-level vision, emotional resonance, and "the why". Avoid implementation details.',
+    icon: 'Lightbulb'
+  },
+  {
+    id: 'dt-spec',
+    name: 'Specification',
+    code: 'spec',
+    color: 'bg-blue-100 text-blue-800 border-blue-200',
+    description: 'Detailed product requirements',
+    defaultRules: 'Be precise, unambiguous, and exhaustive. Focus on "the what" and "the how". Use technical terminology.',
+    icon: 'FileText'
+  },
+  {
+    id: 'dt-flow',
+    name: 'User Flow',
+    code: 'flow',
+    color: 'bg-emerald-100 text-emerald-800 border-emerald-200',
+    description: 'User journeys and interactions',
+    defaultRules: 'Focus on the user experience, steps, and transitions. Identify edge cases and error states.',
+    icon: 'GitBranch'
+  }
+];
+
+const INITIAL_TEMPLATES: DocumentTemplate[] = [
+  {
+    id: 'tpl-idea-basic',
+    name: 'New Idea',
+    description: 'Blank canvas for a new concept',
+    typeId: 'dt-idea',
+    rules: '',
+    initialSections: [
+      { type: 'text', title: 'Vision', content: '' },
+      { type: 'list', title: 'Key Objectives', content: '' }
+    ]
+  },
+  {
+    id: 'tpl-spec-tech',
+    name: 'Technical Spec',
+    description: 'Engineering-focused specification',
+    typeId: 'dt-spec',
+    rules: 'Include database schemas, API endpoints, and security considerations.',
+    initialSections: [
+      { type: 'text', title: 'Architecture Overview', content: '' },
+      { type: 'code', title: 'Data Models', content: '' }
+    ]
+  },
+  {
+    id: 'tpl-flow-user',
+    name: 'User Journey',
+    description: 'Standard user path mapping',
+    typeId: 'dt-flow',
+    rules: '',
+    initialSections: [
+      { type: 'text', title: 'Persona', content: '' },
+      { type: 'list', title: 'Steps', content: '' }
+    ]
+  }
+];
 
 const INITIAL_DOCS: Document[] = [
   // 1. Idea Document (North Star)
@@ -320,25 +412,45 @@ const DocumentContext = createContext<DocumentContextType | undefined>(undefined
 
 export function DocumentProvider({ children }: { children: React.ReactNode }) {
   const [documents, setDocuments] = useState<Document[]>(INITIAL_DOCS);
+  const [documentTypes, setDocumentTypes] = useState<DocumentType[]>(INITIAL_TYPES);
+  const [templates, setTemplates] = useState<DocumentTemplate[]>(INITIAL_TEMPLATES);
   const [currentDocId, setCurrentDocId] = useState<string | null>(null);
   const [projectRules, setProjectRules] = useState<string>(INITIAL_PROJECT_RULES);
 
-  const createDocument = (type: Document['type'], parentId?: string) => {
+  const createDocument = (type: string, parentId?: string, templateId?: string) => {
+    let initialSections: Section[] = [
+      {
+        id: `sec-${Date.now()}`,
+        type: 'text',
+        title: 'Introduction',
+        content: '',
+        status: 'draft'
+      }
+    ];
+
+    let docRules = '';
+
+    // Apply template if provided
+    if (templateId) {
+      const template = templates.find(t => t.id === templateId);
+      if (template) {
+        docRules = template.rules;
+        initialSections = template.initialSections.map((s, idx) => ({
+          ...s,
+          id: `sec-${Date.now()}-${idx}`,
+          status: 'draft'
+        }));
+      }
+    }
+
     const newDoc: Document = {
       id: `doc-${Date.now()}`,
       title: parentId ? `Derived ${type} from ${documents.find(d => d.id === parentId)?.title}` : 'Untitled Document',
       type,
       parentId,
       childrenIds: [],
-      sections: [
-        {
-          id: `sec-${Date.now()}`,
-          type: 'text',
-          title: 'Introduction',
-          content: '',
-          status: 'draft'
-        }
-      ],
+      sections: initialSections,
+      rules: docRules,
       createdAt: new Date(),
       updatedAt: new Date()
     };
@@ -386,7 +498,7 @@ export function DocumentProvider({ children }: { children: React.ReactNode }) {
     }));
   };
 
-  const generateChildDocument = (parentId: string, type: Document['type']) => {
+  const generateChildDocument = (parentId: string, type: string) => {
     const newId = createDocument(type, parentId);
     // In a real app, this would trigger AI generation based on parent content
     // Here we just navigate to it
@@ -394,10 +506,24 @@ export function DocumentProvider({ children }: { children: React.ReactNode }) {
   };
   
   const getDocument = (id: string) => documents.find(d => d.id === id);
+  
+  const getObjectType = (typeCode: string) => documentTypes.find(dt => dt.code === typeCode);
+
+  const addDocumentType = (dt: DocumentType) => setDocumentTypes(prev => [...prev, dt]);
+  const updateDocumentType = (id: string, updates: Partial<DocumentType>) => {
+    setDocumentTypes(prev => prev.map(dt => dt.id === id ? { ...dt, ...updates } : dt));
+  };
+
+  const addTemplate = (t: DocumentTemplate) => setTemplates(prev => [...prev, t]);
+  const updateTemplate = (id: string, updates: Partial<DocumentTemplate>) => {
+    setTemplates(prev => prev.map(t => t.id === id ? { ...t, ...updates } : t));
+  };
 
   return (
     <DocumentContext.Provider value={{
       documents,
+      documentTypes,
+      templates,
       currentDocId,
       setCurrentDocId,
       createDocument,
@@ -406,8 +532,13 @@ export function DocumentProvider({ children }: { children: React.ReactNode }) {
       addSection,
       generateChildDocument,
       getDocument,
+      getObjectType,
       projectRules,
-      setProjectRules
+      setProjectRules,
+      addDocumentType,
+      updateDocumentType,
+      addTemplate,
+      updateTemplate
     }}>
       {children}
     </DocumentContext.Provider>

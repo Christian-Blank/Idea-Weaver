@@ -63,9 +63,11 @@ const SectionBlock = ({
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   
   // Get inherited rules
-  const { projectRules, getDocument } = useDocuments();
+  const { projectRules, getDocument, getObjectType } = useDocuments();
   const currentDoc = getDocument(docId);
   const docRules = currentDoc?.rules || '';
+  const docType = currentDoc ? getObjectType(currentDoc.type) : undefined;
+  const typeRules = docType?.defaultRules || '';
   
   // Default values if not present
   const executionMode = section.executionMode || 'disabled';
@@ -128,6 +130,7 @@ const SectionBlock = ({
       
       const fullPrompt = `
         Project Rules: ${projectRules}
+        Document Type Rules: ${typeRules}
         Document Rules: ${docRules}
         Section Rules: ${rules}
         Content: ${section.content}
@@ -136,6 +139,10 @@ const SectionBlock = ({
       // Basic simulation of rule checking
       if (projectRules.toLowerCase().includes('professional')) {
         suggestions.push('Project Rule Check: Tone matches professional standard.');
+      }
+
+      if (typeRules && Math.random() > 0.5) {
+        suggestions.push(`Type Rule Check: Ensuring compliance with ${docType?.name} standards.`);
       }
       
       if (docRules.toLowerCase().includes('vision')) {
@@ -285,7 +292,7 @@ const SectionBlock = ({
               <div className="bg-muted/30 rounded-lg p-3 border border-border space-y-3">
                 
                 {/* Inherited Rules Display */}
-                {(projectRules || docRules) && (
+                {(projectRules || docRules || typeRules) && (
                   <div className="space-y-2 pb-2 border-b border-border/50">
                     <div className="text-[10px] uppercase font-bold text-muted-foreground/70 tracking-widest flex items-center gap-1">
                       <GitBranch size={10} className="rotate-180" /> Inherited Rules
@@ -296,6 +303,14 @@ const SectionBlock = ({
                           <Globe size={10} /> Project Level
                         </span>
                         <p className="line-clamp-2 italic">{projectRules}</p>
+                      </div>
+                    )}
+                    {typeRules && (
+                       <div className="text-[10px] text-muted-foreground bg-background/50 p-2 rounded border border-border/50">
+                        <span className="font-semibold text-indigo-500/70 block mb-0.5 flex items-center gap-1">
+                          <Settings2 size={10} /> Type Level ({docType?.name})
+                        </span>
+                        <p className="line-clamp-2 italic">{typeRules}</p>
                       </div>
                     )}
                     {docRules && (
