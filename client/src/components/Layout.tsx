@@ -9,15 +9,42 @@ import {
   Menu,
   Home,
   UserCircle,
-  LogOut
+  LogOut,
+  Search
 } from 'lucide-react';
 import { Sheet, SheetContent, SheetTrigger } from './ui/sheet';
 import { cn } from '../lib/utils';
+import {
+  CommandDialog,
+  CommandInput,
+  CommandList,
+  CommandEmpty,
+  CommandGroup,
+  CommandItem,
+  CommandShortcut,
+} from './ui/command';
 
 export function Layout({ children }: { children: React.ReactNode }) {
   const [location, setLocation] = useLocation();
   const { documents, createDocument, setCurrentDocId, currentUser, logout } = useDocuments();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = React.useState(false);
+  const [isCommandOpen, setIsCommandOpen] = React.useState(false);
+
+  React.useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
+        e.preventDefault();
+        setIsCommandOpen((prev) => !prev);
+      }
+      if (e.key === '/' && !isCommandOpen && (document.activeElement === document.body)) {
+        e.preventDefault();
+        setIsCommandOpen(true);
+      }
+    };
+
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  }, [isCommandOpen]);
 
   const handleLogout = () => {
     logout();
@@ -147,22 +174,96 @@ export function Layout({ children }: { children: React.ReactNode }) {
             </div>
             <span className="font-serif font-bold">FlowState</span>
          </div>
-         <Sheet open={isMobileMenuOpen} onOpenChange={setIsMobileMenuOpen}>
-           <SheetTrigger asChild>
-             <Button variant="ghost" size="icon">
-               <Menu size={20} />
-             </Button>
-           </SheetTrigger>
-           <SheetContent side="left" className="p-0 w-64 border-r-0">
-             <NavContent />
-           </SheetContent>
-         </Sheet>
+         <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              className="hidden xs:flex gap-2 text-xs text-muted-foreground border-dashed"
+              onClick={() => setIsCommandOpen(true)}
+              data-testid="button-command-palette-mobile"
+            >
+              <Search size={14} />
+              Quick Search
+            </Button>
+            <Sheet open={isMobileMenuOpen} onOpenChange={setIsMobileMenuOpen}>
+              <SheetTrigger asChild>
+                <Button variant="ghost" size="icon">
+                  <Menu size={20} />
+                </Button>
+              </SheetTrigger>
+              <SheetContent side="left" className="p-0 w-64 border-r-0">
+                <NavContent />
+              </SheetContent>
+            </Sheet>
+         </div>
       </div>
 
       {/* Main Content */}
       <main className="flex-1 h-full overflow-hidden relative md:pt-0 pt-14">
         {children}
       </main>
+
+      {/* Command Palette */}
+      <CommandDialog open={isCommandOpen} onOpenChange={setIsCommandOpen}>
+        <CommandInput placeholder="Type / to see commands or search documents..." />
+        <CommandList>
+          <CommandEmpty>No results found.</CommandEmpty>
+          <CommandGroup heading="Commands">
+            <CommandItem
+              onSelect={() => {
+                setIsCommandOpen(false);
+                setLocation('/');
+              }}
+              data-testid="command-go-dashboard"
+            >
+              <Home className="mr-2" size={16} />
+              <span>/home – Go to dashboard</span>
+              <CommandShortcut>H</CommandShortcut>
+            </CommandItem>
+            <CommandItem
+              onSelect={() => {
+                setIsCommandOpen(false);
+                const id = createDocument('idea');
+                setCurrentDocId(id);
+                setLocation(`/editor/${id}`);
+              }}
+              data-testid="command-new-idea"
+            >
+              <Plus className="mr-2" size={16} />
+              <span>/new – New idea</span>
+            </CommandItem>
+            <CommandItem
+              onSelect={() => {
+                setIsCommandOpen(false);
+                setLocation('/settings');
+              }}
+              data-testid="command-open-settings"
+            >
+              <Settings className="mr-2" size={16} />
+              <span>/settings – Workspace settings</span>
+            </CommandItem>
+          </CommandGroup>
+
+          <CommandGroup heading="Documents">
+            {documents.map((doc) => (
+              <CommandItem
+                key={doc.id}
+                onSelect={() => {
+                  setIsCommandOpen(false);
+                  setCurrentDocId(doc.id);
+                  setLocation(`/editor/${doc.id}`);
+                }}
+                data-testid={`command-open-doc-${doc.id}`}
+              >
+                <span className="mr-2 inline-flex h-5 w-5 items-center justify-center rounded-sm border text-[10px] capitalize">
+                  {doc.type}
+                </span>
+                <span className="truncate max-w-[260px]">{doc.title}</span>
+              </CommandItem>
+            ))}
+          </CommandGroup>
+        </CommandList>
+      </CommandDialog>
     </div>
   );
 }
