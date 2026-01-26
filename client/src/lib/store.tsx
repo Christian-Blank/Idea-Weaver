@@ -78,7 +78,7 @@ export interface DocumentTemplate {
 export interface Document {
   id: string;
   title: string;
-  type: string; // Changed from literal union to string to support dynamic types
+  type: string; // logical type, e.g. "idea", "spec", "flow", "scratchpad"
   parentId?: string;
   childrenIds: string[];
   sections: Section[];
@@ -88,6 +88,12 @@ export interface Document {
   groupIds?: string[];
   createdAt: Date;
   updatedAt: Date;
+  // Tagging & ownership metadata
+  tags?: string[]; // free-form user tags ("ai", "v1", etc.)
+  suggestedTags?: string[]; // mock AI suggestions
+  projectName?: string; // for system tag project:<project>
+  driUserId?: string | null; // explicit DRI assignment
+  lastEditedByUserId?: string | null; // for defaults and history
 }
 
 interface DocumentContextType {
@@ -256,6 +262,11 @@ const INITIAL_DOCS: Document[] = [
     childrenIds: ['spec-1'],
     createdAt: new Date('2024-01-01'),
     updatedAt: new Date('2024-01-02'),
+    projectName: 'FlowState Suite',
+    driUserId: 'u-1',
+    lastEditedByUserId: 'u-1',
+    tags: ['ai-native', 'vision'],
+    suggestedTags: ['north-star', 'strategy', 'product-vision'],
     sections: [
       {
         id: 'sec-1',
@@ -283,6 +294,11 @@ const INITIAL_DOCS: Document[] = [
     childrenIds: ['spec-2', 'spec-3'],
     createdAt: new Date('2024-01-03'),
     updatedAt: new Date('2024-01-05'),
+    projectName: 'FlowState Suite',
+    driUserId: 'u-2',
+    lastEditedByUserId: 'u-2',
+    tags: ['mvp', 'spec'],
+    suggestedTags: ['requirements', 'v1-scope', 'engineering'],
     sections: [
       {
         id: 'sec-3',
@@ -324,6 +340,11 @@ const INITIAL_DOCS: Document[] = [
     childrenIds: [],
     createdAt: new Date('2024-01-06'),
     updatedAt: new Date('2024-01-06'),
+    projectName: 'Auth & Profiles',
+    driUserId: 'u-2',
+    lastEditedByUserId: 'u-2',
+    tags: ['auth', 'profiles'],
+    suggestedTags: ['login-flow', 'onboarding', 'security'],
     sections: [
       {
         id: 'sec-5',
@@ -357,6 +378,11 @@ const INITIAL_DOCS: Document[] = [
     childrenIds: ['flow-1', 'spec-4', 'spec-5'],
     createdAt: new Date('2024-01-07'),
     updatedAt: new Date('2024-01-08'),
+    projectName: 'Infinite Canvas',
+    driUserId: 'u-3',
+    lastEditedByUserId: 'u-3',
+    tags: ['dashboard', 'canvas'],
+    suggestedTags: ['infinite-scroll', 'graph-view', 'spatial'],
     history: [
       {
         id: 'h1',
